@@ -1,0 +1,226 @@
+<Page
+    x:Class="WOLe.Provisioner.Views.ShutdownActionMappingPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- TOGGLE SWITCH NEON BLUE OVERRIDES -->
+    <Page.Resources>
+        <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{StaticResource WoleNeonBlueColor}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{StaticResource WoleNeonBlueColor}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{StaticResource WoleNeonBlueColor}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{StaticResource WoleNeonBlueColor}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{StaticResource WoleNeonBlueColor}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{StaticResource WoleNeonBlueColor}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="White" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="White" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="White" />
+    </Page.Resources>
+
+    <Grid Padding="32">
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Width="660"
+                        HorizontalAlignment="Center"
+                        Spacing="28">
+
+                <!-- PAGE TITLE -->
+                <TextBlock Text="Launch App Configuration"
+                           Style="{StaticResource PageTitleStyle}"
+                           Margin="0,48,0,0" />
+
+                <!-- DESCRIPTION -->
+                <TextBlock Text="Configure the application bindings for this PC."
+                           Style="{StaticResource PageIntroStyle}"
+                           TextAlignment="Center"
+                           MaxWidth="660" 
+                           Margin="0,0,0,12" />
+
+                <!-- ========================================================= -->
+                <!-- INLINE GRID FOR ALL 4 LAUNCH APP ROWS -->
+                <!-- ========================================================= -->
+
+                <Grid RowSpacing="24" ColumnSpacing="12">
+
+                    <!-- Define all rows -->
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Column order: Label → Toggle → ComboBox → Browse -->
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150"/>    <!-- Label -->
+                        <ColumnDefinition Width="Auto"/>   <!-- Toggle -->
+                        <ColumnDefinition Width="*"/>      <!-- ComboBox -->
+                        <ColumnDefinition Width="Auto"/>   <!-- Browse -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- ========================= -->
+                    <!-- ROW 1: Launch App 1 -->
+                    <!-- ========================= -->
+
+                    <TextBlock Grid.Row="0" Grid.Column="0"
+                               Text="Launch App 1:"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource ConfigSectionHeaderStyle}" />
+
+                    <ToggleSwitch x:Name="UsesLaunchApp1Toggle"
+                                  Grid.Row="0" Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Toggled="UsesLaunchApp1Toggle_Toggled" />
+
+                    <ComboBox x:Name="LaunchApp1ComboBox"
+                              Grid.Row="0" Grid.Column="2"
+                              Margin="-50,0,0,0"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              SelectionChanged="LaunchApp1ComboBox_SelectionChanged" />
+
+                    <Button x:Name="BrowseLaunchApp1Button"
+                            Grid.Row="0" Grid.Column="3"
+                            Content="Browse..."
+                            Height="32"
+                            VerticalAlignment="Center"
+                            Click="BrowseLaunchApp1_Click" />
+
+                    <TextBlock x:Name="LaunchApp1PathText"
+                               Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
+                               Style="{StaticResource ConfigBodyTextStyle}"
+                               Opacity="0.7"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed" />
+
+                    <!-- ========================= -->
+                    <!-- ROW 2: Launch App 2 -->
+                    <!-- ========================= -->
+
+                    <TextBlock Grid.Row="2" Grid.Column="0"
+                               Text="Launch App 2:"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource ConfigSectionHeaderStyle}" />
+
+                    <ToggleSwitch x:Name="UsesLaunchApp2Toggle"
+                                  Grid.Row="2" Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Toggled="UsesLaunchApp2Toggle_Toggled" />
+
+                    <ComboBox x:Name="LaunchApp2ComboBox"
+                              Grid.Row="2" Grid.Column="2"
+                              Margin="-50,0,0,0"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              SelectionChanged="LaunchApp2ComboBox_SelectionChanged" />
+
+                    <Button x:Name="BrowseLaunchApp2Button"
+                            Grid.Row="2" Grid.Column="3"
+                            Content="Browse..."
+                            Height="32"
+                            VerticalAlignment="Center"
+                            Click="BrowseLaunchApp2_Click" />
+
+                    <TextBlock x:Name="LaunchApp2PathText"
+                               Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3"
+                               Style="{StaticResource ConfigBodyTextStyle}"
+                               Opacity="0.7"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed" />
+
+                    <!-- ========================= -->
+                    <!-- ROW 3: Launch App 3 -->
+                    <!-- ========================= -->
+
+                    <TextBlock Grid.Row="4" Grid.Column="0"
+                               Text="Launch App 3:"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource ConfigSectionHeaderStyle}" />
+
+                    <ToggleSwitch x:Name="UsesLaunchApp3Toggle"
+                                  Grid.Row="4" Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Toggled="UsesLaunchApp3Toggle_Toggled" />
+
+                    <ComboBox x:Name="LaunchApp3ComboBox"
+                              Grid.Row="4" Grid.Column="2"
+                              Margin="-50,0,0,0"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              SelectionChanged="LaunchApp3ComboBox_SelectionChanged" />
+
+                    <Button x:Name="BrowseLaunchApp3Button"
+                            Grid.Row="4" Grid.Column="3"
+                            Content="Browse..."
+                            Height="32"
+                            VerticalAlignment="Center"
+                            Click="BrowseLaunchApp3_Click" />
+
+                    <TextBlock x:Name="LaunchApp3PathText"
+                               Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3"
+                               Style="{StaticResource ConfigBodyTextStyle}"
+                               Opacity="0.7"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed" />
+
+                    <!-- ========================= -->
+                    <!-- ROW 4: Launch App 4 -->
+                    <!-- ========================= -->
+
+                    <TextBlock Grid.Row="6" Grid.Column="0"
+                               Text="Launch App 4:"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource ConfigSectionHeaderStyle}" />
+
+                    <ToggleSwitch x:Name="UsesLaunchApp4Toggle"
+                                  Grid.Row="6" Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Toggled="UsesLaunchApp4Toggle_Toggled" />
+
+                    <ComboBox x:Name="LaunchApp4ComboBox"
+                              Grid.Row="6" Grid.Column="2"
+                              Margin="-50,0,0,0"
+                              VerticalAlignment="Center"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Stretch"
+                              SelectionChanged="LaunchApp4ComboBox_SelectionChanged" />
+
+                    <Button x:Name="BrowseLaunchApp4Button"
+                            Grid.Row="6" Grid.Column="3"
+                            Content="Browse..."
+                            Height="32"
+                            VerticalAlignment="Center"
+                            Click="BrowseLaunchApp4_Click" />
+
+                    <TextBlock x:Name="LaunchApp4PathText"
+                               Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="3"
+                               Style="{StaticResource ConfigBodyTextStyle}"
+                               Opacity="0.7"
+                               FontSize="11"
+                               TextWrapping="Wrap"
+                               Visibility="Collapsed" />
+
+                </Grid>
+
+                <!-- ERROR TEXT -->
+                <TextBlock x:Name="ErrorText"
+                           Style="{StaticResource ConfigBodyTextStyle}"
+                           Foreground="{ThemeResource ConfigErrorBrush}"
+                           Visibility="Collapsed"
+                           TextAlignment="Center"
+                           Margin="0,8,0,0" />
+
+            </StackPanel>
+        </ScrollViewer>
+
+    </Grid>
+</Page>

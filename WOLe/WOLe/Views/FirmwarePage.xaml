@@ -1,0 +1,48 @@
+<Page
+    x:Class="WOLe.Provisioner.Views.FirmwarePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Padding="32">
+
+        <StackPanel Spacing="28"
+                    MaxWidth="720"
+                    HorizontalAlignment="Center">
+
+            <!-- PAGE TITLE -->
+            <TextBlock Text="Build Firmware"
+                       Style="{StaticResource PageTitleStyle}"
+                       Margin="0,48,0,0" />
+
+            <!-- DESCRIPTION -->
+            <TextBlock Text="This step generates a customized firmware binary using your configuration settings."
+                       Style="{StaticResource PageIntroStyle}"
+                       TextAlignment="Center"
+                       MaxWidth="720" />
+
+            <!-- OUTPUT PATH -->
+            <TextBox x:Name="OutputPathTextBox"
+                     Header="Generated Firmware Path"
+                     IsReadOnly="True"
+                     PlaceholderText="No firmware generated yet" />
+
+            <!-- GENERATE BUTTON -->
+            <Button x:Name="GenerateButton"
+                    Content="Generate Firmware"
+                    Width="240"
+                    Height="44"
+                    HorizontalAlignment="Center"
+                    Click="GenerateFirmware_Click" />
+
+            <!-- STATUS TEXT -->
+            <TextBlock x:Name="StatusText"
+                       Style="{StaticResource ConfigBodyTextStyle}"
+                       HorizontalAlignment="Center"
+                       Foreground="Green"
+                       FontWeight="SemiBold"
+                       Margin="0,8,0,0" />
+
+        </StackPanel>
+
+    </Grid>
+</Page>

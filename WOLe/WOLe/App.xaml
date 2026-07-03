@@ -1,0 +1,31 @@
+<Application
+    x:Class="WOLe.Provisioner.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WOLe.Provisioner"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls">
+
+    <Application.Resources>
+        <ResourceDictionary>
+
+            <ResourceDictionary.MergedDictionaries>
+
+                <!-- WinUI default controls -->
+                <controls:XamlControlsResources />
+
+                <!-- Your global theme brushes -->
+                <ResourceDictionary Source="ms-appx:///Styles/ThemeBrushes.xaml" />
+
+                <!-- Your global typography styles -->
+                <ResourceDictionary Source="ms-appx:///Styles/Typography.xaml" />
+
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- WOLE NEON BLUE -->
+            <Color x:Key="WoleNeonBlueColor">#0CD3F7</Color>
+            <SolidColorBrush x:Key="WoleNeonBlueBrush" Color="{StaticResource WoleNeonBlueColor}" />
+
+        </ResourceDictionary>
+    </Application.Resources>
+
+</Application>

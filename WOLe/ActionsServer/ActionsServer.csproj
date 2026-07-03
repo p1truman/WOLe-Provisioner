@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+
+    <!-- NativeAOT -->
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <StripSymbols>true</StripSymbols>
+
+    <!-- Trimming -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <IlcDisableReflection>true</IlcDisableReflection>
+
+    <!-- Optimize for size -->
+    <OptimizationPreference>Size</OptimizationPreference>
+
+    <!-- Windows native target -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+    <!-- No debug symbols -->
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+</Project>

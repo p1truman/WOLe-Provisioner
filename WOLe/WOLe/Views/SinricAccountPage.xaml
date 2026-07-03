@@ -1,0 +1,255 @@
+<Page
+    x:Class="WOLe.Provisioner.Views.SinricAccountPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Page.Resources>
+        <ResourceDictionary>
+
+            <!-- Keep only the custom bullet style -->
+            <Style x:Key="BulletStyle" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{ThemeResource ConfigAccentBrush}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="Width" Value="20" />
+                <Setter Property="TextAlignment" Value="Center" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="VerticalAlignment" Value="Top" />
+                <Setter Property="Margin" Value="0,1,10,0" />
+            </Style>
+
+        </ResourceDictionary>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Padding="32">
+            <StackPanel MaxWidth="760"
+                        HorizontalAlignment="Center"
+                        Spacing="0">
+
+                <!-- TITLE -->
+                <TextBlock Text="Sinric Pro Account Creation"
+                           Style="{StaticResource PageTitleStyle}"
+                           Margin="0,36,0,30" />
+
+                <!-- INTRO -->
+                <TextBlock Style="{StaticResource PageIntroStyle}"
+                           MaxWidth="700"
+                           Margin="0,0,0,34">
+                    <Run Text="For voice assistant integration, we'll need to create a" />
+                    <Run Text=" Sinric Pro " FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="account and add some devices (switches)." />
+                </TextBlock>
+
+                <!-- SECTION HEADER -->
+                <TextBlock Text="What you'll need"
+                           Style="{StaticResource ConfigSectionHeaderStyle}"
+                           Margin="0,0,0,12" />
+
+                <!-- BODY TEXT BLOCKS -->
+                <TextBlock Style="{StaticResource ConfigBodyTextStyle}">
+                    <Run Text="Basic " />
+                    <Run Text="Wake-on-LAN" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text=" and " />
+                    <Run Text="Shutdown" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text=" functionality requires a " />
+                    <Run Text="single device for each PC" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text=" on your WOL-e network." />
+                </TextBlock>
+
+                <TextBlock Style="{StaticResource ConfigBodyTextStyle}"
+                           Margin="0,10,0,0">
+                    <Run Text="For enhanced WOL-e features such as " />
+                    <Run Text="Restart, " FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="Sleep, " FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="Hibernate, " FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="Lock " FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="and " />
+                    <Run Text="Screen off, " FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="a " />
+                    <Run Text="second device" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text=" is required." />
+                </TextBlock>
+
+                <TextBlock Style="{StaticResource ConfigBodyTextStyle}"
+                           Margin="0,10,0,0">
+                    <Run Text="Sinric Pro's basic tier includes up to " />
+                    <Run Text="three devices free of charge." FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text=" Additional devices are easily added and charged per anum for less than the price of a coffee." />
+                </TextBlock>
+
+                <!-- DIVIDER -->
+                <Rectangle Height="1"
+                           Margin="0,28,0,15"
+                           Fill="{ThemeResource ConfigDividerBrush}"
+                           Opacity="0.8" />
+
+                <!-- TWO COLUMN GRID -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="32" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- LEFT COLUMN -->
+                    <StackPanel Grid.Column="0">
+
+                        <TextBlock Text="Device naming convention"
+                                   Style="{StaticResource ConfigSectionHeaderStyle}"
+                                   Margin="0,0,0,12" />
+
+                        <!-- BULLET 1 -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="•" Style="{StaticResource BulletStyle}" />
+
+                            <TextBlock Grid.Column="1"
+                                       Style="{StaticResource ConfigBodyTextStyle}">
+                                <Run Text="Single-device setup → " />
+                                <Run Text="ComputerName" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                            </TextBlock>
+                        </Grid>
+
+                        <!-- BULLET 2 -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="•" Style="{StaticResource BulletStyle}" />
+
+                            <TextBlock Grid.Column="1"
+                                       Style="{StaticResource ConfigBodyTextStyle}">
+                                <Run Text="Multi-device setup → " />
+                                <Run Text="ComputerName + Function" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                            </TextBlock>
+                        </Grid>
+
+                        <!-- BULLET 3 -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="" Style="{StaticResource BulletStyle}" />
+
+                            <TextBlock Grid.Column="1"
+                                       Style="{StaticResource ConfigBodyTextStyle}">
+                                <Run Text="Example → " />
+                                <Run Text="PC1 Power" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                                <Run Text=" and " />
+                                <Run Text="PC1 Enhanced" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                            </TextBlock>
+                        </Grid>
+
+                    </StackPanel>
+
+                    <!-- DIVIDER -->
+                    <Rectangle Grid.Column="1"
+                               Width="1"
+                               Fill="{ThemeResource ConfigDividerBrush}"
+                               Opacity="0.8"
+                               HorizontalAlignment="Center"
+                               Stretch="Fill"
+                               Margin="0,4" />
+
+                    <!-- RIGHT COLUMN -->
+                    <StackPanel Grid.Column="2">
+
+                        <TextBlock Text="Before you return"
+                                   Style="{StaticResource ConfigSectionHeaderStyle}"
+                                   Margin="22,0,0,12" />
+
+                        <!-- ✓ BULLET 1 -->
+                        <Grid Margin="80,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="✓" Style="{StaticResource BulletStyle}" />
+
+                            <TextBlock Grid.Column="1"
+                                       Style="{StaticResource ConfigBodyTextStyle}">
+                                <Run Text="Save your " />
+                                <Run Text="App Key" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                            </TextBlock>
+                        </Grid>
+
+                        <!-- ✓ BULLET 2 -->
+                        <Grid Margin="80,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="✓" Style="{StaticResource BulletStyle}" />
+
+                            <TextBlock Grid.Column="1"
+                                       Style="{StaticResource ConfigBodyTextStyle}">
+                                <Run Text="Save your " />
+                                <Run Text="App Secret" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                            </TextBlock>
+                        </Grid>
+
+                        <!-- ✓ BULLET 3 -->
+                        <Grid Margin="80,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="✓" Style="{StaticResource BulletStyle}" />
+
+                            <TextBlock Grid.Column="1"
+                                       Style="{StaticResource ConfigBodyTextStyle}">
+                                <Run Text="Save each device's " />
+                                <Run Text="Device ID" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                            </TextBlock>
+                        </Grid>
+
+                    </StackPanel>
+                </Grid>
+
+                <!-- BUTTON SECTION -->
+                <StackPanel Margin="0,50,0,0"
+                            Spacing="12"
+                            HorizontalAlignment="Center">
+
+                    <TextBlock Text="Open Sinric Pro"
+                               Style="{StaticResource ConfigSectionHeaderStyle}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center" />
+
+                    <TextBlock Text="Click below to open Sinric Pro in your default browser."
+                               Style="{StaticResource ConfigBodyTextStyle}"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               MaxWidth="520" />
+
+                    <Button Content="Continue to Sinric Pro"
+                            Width="240"
+                            Height="44"
+                            HorizontalAlignment="Center"
+                            Click="ContinueToSinric_Click" />
+
+                    <TextBlock x:Name="LaunchErrorText"
+                               Text="Unable to open browser. Please navigate manually to https://sinric.pro"
+                               Foreground="{ThemeResource ConfigErrorBrush}"
+                               Visibility="Collapsed"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               MaxWidth="520" />
+                </StackPanel>
+
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>

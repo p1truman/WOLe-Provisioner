@@ -1,0 +1,243 @@
+<Page
+    x:Class="WOLe.Provisioner.Views.PcConfigPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:WOLe.Provisioner.Models"
+    xmlns:local="using:WOLe.Provisioner.Services">
+
+    <Page.Resources>
+        <ResourceDictionary>
+            <!-- Only keep your converter -->
+            <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+        </ResourceDictionary>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Padding="32">
+            <StackPanel MaxWidth="760"
+                        HorizontalAlignment="Center"
+                        Spacing="20">
+
+                <!-- PAGE TITLE -->
+                <TextBlock Text="Configure Your PCs"
+                           Style="{StaticResource PageTitleStyle}"
+                           Margin="0,36,0,6" />
+
+                <TextBlock Text="Enter Sinric Pro Device IDs and network credentials for each PC on your WOL-e Network."
+                           Style="{StaticResource ConfigBodyTextStyle}" />
+
+                <!-- PC COUNT -->
+                <ComboBox x:Name="PcCountComboBox"
+                          Header="Number of PCs"
+                          SelectionChanged="PcCountComboBox_SelectionChanged"
+                          Margin="0,4,0,-12">
+                    <ComboBoxItem Content="1" />
+                    <ComboBoxItem Content="2" />
+                    <ComboBoxItem Content="3" />
+                    <ComboBoxItem Content="4" />
+                    <ComboBoxItem Content="5" />
+                </ComboBox>
+
+                <!-- SINGLE PC LAYOUT -->
+                <StackPanel x:Name="NonScrollContainer"
+                            Visibility="Collapsed"
+                            Width="550">
+
+                    <ItemsControl x:Name="PcItemsControl_NoScroll"
+                                  HorizontalContentAlignment="Stretch">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Spacing="12"
+                                            Margin="0,12,0,4"
+                                            HorizontalAlignment="Stretch">
+
+                                    <!-- PC LABEL -->
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"
+                                               Foreground="{ThemeResource ConfigAccentBrush}" />
+
+                                    <!-- POWER DEVICE -->
+                                    <TextBox Header="Power Device ID (Required)"
+                                             Text="{Binding PowerDeviceId, Mode=TwoWay}" />
+
+                                    <!-- ENHANCED DEVICES HEADER + BUTTONS -->
+                                    <Grid ColumnSpacing="8" Margin="0,2,0,-14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Text="Enhanced Devices (Optional)"
+                                                   Style="{StaticResource ConfigSectionHeaderStyle}" />
+
+                                        <!-- DELETE -->
+                                        <Button Content="Delete"
+                                                Grid.Column="1"
+                                                Width="80"
+                                                Height="36"
+                                                Tag="{Binding}"
+                                                Click="RemoveEnhancedDevice_Click"
+                                                Visibility="{Binding EnhancedDevices.Count, Converter={StaticResource CountToVisibilityConverter}}" />
+
+                                        <!-- ADD -->
+                                        <Button Content="Add"
+                                                Grid.Column="2"
+                                                Width="80"
+                                                Height="36"
+                                                Tag="{Binding}"
+                                                Click="AddEnhancedDevice_Click" />
+                                    </Grid>
+
+                                    <!-- ENHANCED DEVICES LIST -->
+                                    <ItemsControl ItemsSource="{Binding EnhancedDevices}"
+                                                  Margin="0,0,0,-12">
+                                        <ItemsControl.ItemContainerStyle>
+                                            <Style TargetType="ContentPresenter">
+                                                <Setter Property="Margin" Value="0,0,0,12" />
+                                            </Style>
+                                        </ItemsControl.ItemContainerStyle>
+
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBox Header="{Binding Header}"
+                                                         Text="{Binding DeviceId, Mode=TwoWay}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- MAC -->
+                                    <TextBox Header="MAC Address"
+                                             Text="{Binding MacAddress, Mode=TwoWay}" />
+
+                                    <!-- IP + PORT -->
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="140" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBox Header="IP Address"
+                                                 Text="{Binding IpAddress, Mode=TwoWay}" />
+
+                                        <TextBox Header="Port"
+                                                 Text="{Binding Port, Mode=TwoWay}"
+                                                 Grid.Column="1" />
+                                    </Grid>
+
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                </StackPanel>
+
+                <!-- MULTI-PC SCROLL LAYOUT -->
+                <ScrollViewer x:Name="ScrollContainer"
+                              Visibility="Collapsed"
+                              VerticalScrollBarVisibility="Auto"
+                              Width="550"
+                              Height="430"
+                              Margin="0,4,0,0">
+
+                    <ItemsControl x:Name="PcItemsControl_Scroll"
+                                  HorizontalContentAlignment="Stretch">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Spacing="12"
+                                            Margin="0,12,0,4"
+                                            HorizontalAlignment="Stretch">
+
+                                    <!-- PC LABEL -->
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"
+                                               Foreground="{ThemeResource ConfigAccentBrush}" />
+
+                                    <!-- POWER DEVICE -->
+                                    <TextBox Header="Power Device ID (Required)"
+                                             Text="{Binding PowerDeviceId, Mode=TwoWay}" />
+
+                                    <!-- ENHANCED DEVICES HEADER + BUTTONS -->
+                                    <Grid ColumnSpacing="8" Margin="0,2,0,-14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Text="Enhanced Devices (Optional)"
+                                                   Style="{StaticResource ConfigSectionHeaderStyle}" />
+
+                                        <!-- DELETE -->
+                                        <Button Content="Delete"
+                                                Grid.Column="1"
+                                                Width="80"
+                                                Height="36"
+                                                Tag="{Binding}"
+                                                Click="RemoveEnhancedDevice_Click"
+                                                Visibility="{Binding EnhancedDevices.Count, Converter={StaticResource CountToVisibilityConverter}}" />
+
+                                        <!-- ADD -->
+                                        <Button Content="Add"
+                                                Grid.Column="2"
+                                                Width="80"
+                                                Height="36"
+                                                Tag="{Binding}"
+                                                Click="AddEnhancedDevice_Click" />
+                                    </Grid>
+
+                                    <!-- ENHANCED DEVICES LIST -->
+                                    <ItemsControl ItemsSource="{Binding EnhancedDevices}"
+                                                  Margin="0,0,0,-12">
+                                        <ItemsControl.ItemContainerStyle>
+                                            <Style TargetType="ContentPresenter">
+                                                <Setter Property="Margin" Value="0,0,0,12" />
+                                            </Style>
+                                        </ItemsControl.ItemContainerStyle>
+
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBox Header="{Binding Header}"
+                                                         Text="{Binding DeviceId, Mode=TwoWay}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- MAC -->
+                                    <TextBox Header="MAC Address"
+                                             Text="{Binding MacAddress, Mode=TwoWay}" />
+
+                                    <!-- IP + PORT -->
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="140" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBox Header="IP Address"
+                                                 Text="{Binding IpAddress, Mode=TwoWay}" />
+
+                                        <TextBox Header="Port"
+                                                 Text="{Binding Port, Mode=TwoWay}"
+                                                 Grid.Column="1" />
+                                    </Grid>
+
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                </ScrollViewer>
+
+                <!-- ERROR TEXT -->
+                <TextBlock x:Name="ErrorText"
+                           Foreground="{ThemeResource ConfigErrorBrush}"
+                           Visibility="Collapsed"
+                           Margin="0,4,0,0" />
+
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>

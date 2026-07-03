@@ -1,0 +1,68 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>WOLe.Provisioner</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>false</EnableMsixTooling>
+
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <EnableDefaultPageItems>true</EnableDefaultPageItems>
+
+    <Nullable>enable</Nullable>
+
+    <AssemblyName>WOLe</AssemblyName>
+    <RootNamespace>WOLe.Provisioner</RootNamespace>
+    <ApplicationTitle>WOL‑e</ApplicationTitle>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Tools\**\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="Python\**" />
+    <Content Remove="Tools\esp32-core\**\*" />
+    <None Remove="Python\**" />
+    <None Remove="Tools\esp32-core\**\*" />
+    <Content Remove="Tools\WebSockets\examples\**\*" />
+    <None Remove="Tools\WebSockets\examples\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Python\**" />
+    <EmbeddedResource Remove="Python\**" />
+    <Page Remove="Python\**" />
+    <PRIResource Remove="Python\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Firmware\template.ino" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260317003" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1721" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "WOL-e (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "WOL-e (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

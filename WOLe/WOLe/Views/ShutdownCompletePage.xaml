@@ -1,0 +1,36 @@
+<Page
+    x:Class="WOLe.Provisioner.Views.ShutdownCompletePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Padding="32">
+
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="20"
+                    MaxWidth="480">
+
+            <!-- PAGE TITLE -->
+            <TextBlock Text="Enhanced Actions Installed"
+                       Style="{StaticResource PageTitleStyle}"
+                       HorizontalAlignment="Center"
+                       Margin="0,48,0,0" />
+
+            <!-- DESCRIPTION -->
+            <TextBlock Text="You're good to go! Reboot to initialize enhanced actions."
+                       Style="{StaticResource PageIntroStyle}"
+                       TextAlignment="Center"
+                       MaxWidth="480" />
+
+            <!-- DONE BUTTON -->
+            <Button x:Name="ExitButton"
+                    Content="Done"
+                    Width="160"
+                    Height="48"
+                    HorizontalAlignment="Center"
+                    Click="ExitButton_Click" />
+
+        </StackPanel>
+
+    </Grid>
+</Page>

@@ -1,0 +1,10 @@
+board_manager:
+  additional_urls:
+    - https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+
+directories:
+  data: $APPDATA/WOL-e/data
+  user: $APPDATA/WOL-e/libraries
+
+library:
+  enable_unsafe_install: true

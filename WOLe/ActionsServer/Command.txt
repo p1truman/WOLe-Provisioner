@@ -1,0 +1,13 @@
+cd "D:\Dev\WOLe\ActionsServer"
+
+dotnet publish -c Release -r win-x64 -p:PublishAot=true
+
+cd "D:\Users\RTS\Desktop\New folder (4)\WOLe Provisioner\WOLe\ActionsServer"
+
+
+
+
+cd "D:\Users\RTS\Desktop\New folder (4)\WOLe Provisioner\WOLe\ActionsServer\bin\Release\net8.0\win-x64\publish"
+
+.\ActionsServer.exe
+

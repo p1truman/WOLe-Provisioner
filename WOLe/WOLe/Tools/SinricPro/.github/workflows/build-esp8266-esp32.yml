@@ -1,0 +1,83 @@
+name: Build for ESP8266 and ESP32
+on:
+  workflow_dispatch:
+
+  pull_request:
+    branches: [master]
+    paths:
+      - src/**
+      - examples/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - examples/ACUnit
+          - examples/Blinds
+          - examples/ContactSensor
+          - examples/DimSwitch
+          - examples/doorbell
+          - examples/Fan
+          - examples/GarageDoor
+          - examples/Light/Light
+          - examples/Lock/Lock
+          - examples/Lock/Lock_with_feedback
+          - examples/MotionSensor
+          - examples/PowerSensor
+          - examples/Relay/MultiRelays_advance
+          - examples/Relay/Relay
+          - examples/Speaker
+          - examples/Switch/MultiSwitch_advance
+          - examples/Switch/MultiSwitch_beginner
+          - examples/Switch/MultiSwitch_intermediate
+          - examples/Switch/Switch
+          - examples/Thermostat
+          - examples/TV
+          - examples/OTAUpdate
+          - examples/Health
+          - examples/Settings/MultiWiFi
+          - examples/AirQualitySensor/AirQualitySensor
+        board:
+          - fqbn: esp8266:esp8266:nodemcuv2
+            platform: esp8266:esp8266
+          - fqbn: esp32:esp32:esp32
+            platform: esp32:esp32
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install board platforms
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls https://arduino.esp8266.com/stable/package_esp8266com_index.json
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install ${{ matrix.board.platform }}
+
+      - name: Install library dependencies
+        run: |
+          arduino-cli lib install "ArduinoJson"
+          arduino-cli lib install "WebSockets"
+
+      - name: Link library to Arduino libraries folder
+        run: |
+          mkdir -p ~/Arduino/libraries
+          ln -s $GITHUB_WORKSPACE ~/Arduino/libraries/SinricPro
+
+      - name: Get sketch name
+        id: sketch
+        run: |
+          SKETCH_PATH="${{ matrix.example }}"
+          SKETCH_NAME=$(basename "$SKETCH_PATH")
+          echo "path=${SKETCH_PATH}/${SKETCH_NAME}.ino" >> $GITHUB_OUTPUT
+
+      - name: Compile sketch
+        run: |
+          arduino-cli compile --fqbn ${{ matrix.board.fqbn }} ${{ steps.sketch.outputs.path }}
