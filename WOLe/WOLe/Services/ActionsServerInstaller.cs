@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
+using System.Text.Json;
 using Microsoft.UI.Dispatching;
 using WOLe.Provisioner.Models;
 
@@ -66,6 +68,8 @@ namespace WOLe.Provisioner.Services
         {
             Append("=== WOL-e Enhanced Actions Uninstaller (Native) ===");
 
+            StopRunningServer();
+
             RemoveAllLegacyTasks();
             RemoveFirewallRule();
 
@@ -93,6 +97,46 @@ namespace WOLe.Provisioner.Services
         //  SERVER BINARY
         // ------------------------------------------------------------
 
+        private void StopRunningServer()
+        {
+            try
+            {
+                var runningProcesses = Process.GetProcessesByName("ActionsServer");
+                if (runningProcesses.Length > 0)
+                {
+                    Append($"Stopping {runningProcesses.Length} running ActionsServer instance(s)...");
+                    foreach (var proc in runningProcesses)
+                    {
+                        try
+                        {
+                            proc.Kill();
+                            proc.WaitForExit(3000);
+                            Append($"Stopped ActionsServer (PID {proc.Id}).");
+                        }
+                        catch (Exception ex)
+                        {
+                            Append($"WARN: Could not stop ActionsServer PID {proc.Id}: {ex.Message}");
+                        }
+                        finally
+                        {
+                            proc.Dispose();
+                        }
+                    }
+
+                    // Small delay to allow the OS to fully release the file handle
+                    System.Threading.Thread.Sleep(500);
+                }
+                else
+                {
+                    Append("No running ActionsServer instance found.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Append("WARN: Failed to check for running ActionsServer: " + ex.Message);
+            }
+        }
+
         private void EnsureServerBinary()
         {
             Append("Checking ActionsServer.exe...");
@@ -104,6 +148,9 @@ namespace WOLe.Provisioner.Services
             }
 
             Directory.CreateDirectory(ActionsServiceRoot);
+
+            // Stop any running instance before overwriting the binary
+            StopRunningServer();
 
             File.Copy(ToolsServerExe, ServerExePath, true);
             Append($"Copied ActionsServer.exe to: {ServerExePath}");
@@ -159,10 +206,6 @@ namespace WOLe.Provisioner.Services
 
             int port;
             string secret;
-            string launchApp1Path = "";
-            string launchApp2Path = "";
-            string launchApp3Path = "";
-            string launchApp4Path = "";
 
             bool shutdownOnly = mode == WizardMode.ShutdownOnly;
 
@@ -175,12 +218,19 @@ namespace WOLe.Provisioner.Services
             {
                 port = localPc.Port > 0 ? localPc.Port : 5050;
                 secret = cfg.ShutdownSecret;
-
-                launchApp1Path = localPc.LaunchApp1Path ?? "";
-                launchApp2Path = localPc.LaunchApp2Path ?? "";
-                launchApp3Path = localPc.LaunchApp3Path ?? "";
-                launchApp4Path = localPc.LaunchApp4Path ?? "";
             }
+
+            // ----------------------------------------------------------------
+            //  App binding paths always come from Pcs[0] regardless of mode.
+            //  ShutdownActionMappingPage saves them into Pcs[0] and that is
+            //  the single source of truth — never blank them out.
+            // ----------------------------------------------------------------
+            var pc1 = cfg.Pcs != null && cfg.Pcs.Count > 0 ? cfg.Pcs[0] : null;
+
+            string launchApp1Path = pc1?.LaunchApp1Path ?? "";
+            string launchApp2Path = pc1?.LaunchApp2Path ?? "";
+            string launchApp3Path = pc1?.LaunchApp3Path ?? "";
+            string launchApp4Path = pc1?.LaunchApp4Path ?? "";
 
             string escapeJson(string s) => (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
 
@@ -195,11 +245,34 @@ namespace WOLe.Provisioner.Services
 
             Append($"Generated config.json: {configPath}");
 
+            if (!string.IsNullOrWhiteSpace(launchApp1Path)) Append("App 1 binding: configured");
+            if (!string.IsNullOrWhiteSpace(launchApp2Path)) Append("App 2 binding: configured");
+            if (!string.IsNullOrWhiteSpace(launchApp3Path)) Append("App 3 binding: configured");
+            if (!string.IsNullOrWhiteSpace(launchApp4Path)) Append("App 4 binding: configured");
+
             InstallScheduledTask();
+
+            // Start the server immediately so the user does not need to log out
+            try
+            {
+                Append("Starting ActionsServer...");
+                var psi = new ProcessStartInfo
+                {
+                    FileName = ServerExePath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                Process.Start(psi);
+                Append("ActionsServer started.");
+            }
+            catch (Exception ex)
+            {
+                Append("WARN: Could not auto-start ActionsServer after install: " + ex.Message);
+            }
         }
 
         // ------------------------------------------------------------
-        //  SCHEDULED TASK (UPDATED TO RUN HIDDEN)
+        //  SCHEDULED TASK (per-user, hidden)
         // ------------------------------------------------------------
 
         private void InstallScheduledTask()
@@ -209,21 +282,64 @@ namespace WOLe.Provisioner.Services
             Append("Removing ALL legacy tasks...");
             RemoveAllLegacyTasks();
 
-            Append("Installing silent elevated scheduled task...");
+            Append("Installing per-user hidden scheduled task...");
 
-            string logPath = Path.Combine(ActionsServiceRoot, "actions_log.txt");
+            var user = $"{Environment.UserDomainName}\\{Environment.UserName}";
+            var registrationDate = DateTime.UtcNow.ToString("s") + "Z";
+            string command = ServerExePath;
 
-            string taskCommand =
-                $"\"{ServerExePath}\" >> \"{logPath}\" 2>&1";
+            string taskXml =
+$@"<?xml version=""1.0"" encoding=""UTF-16""?>
+<Task version=""1.4"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
+  <RegistrationInfo>
+    <Date>{registrationDate}</Date>
+    <Author>WOL-e</Author>
+    <Description>WOL-e Actions Server (per-user, hidden)</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT5S</Delay>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id=""Author"">
+      <UserId>{user}</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <Hidden>true</Hidden>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>true</StopOnIdleEnd>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+  </Settings>
+  <Actions Context=""Author"">
+    <Exec>
+      <Command>{command}</Command>
+      <Arguments></Arguments>
+    </Exec>
+  </Actions>
+</Task>";
 
-            string args =
-                $"/Create /TN \"{newTask}\" " +
-                $"/TR \"{taskCommand}\" " +
-                "/SC ONLOGON /RU \"SYSTEM\" /RL HIGHEST /NP /F";
+            string tmpXml = Path.Combine(Path.GetTempPath(), "WOL-e_Actions_Task.xml");
+            File.WriteAllText(tmpXml, taskXml, Encoding.Unicode);
 
-            RunCommand("schtasks", args);
+            RunCommand("schtasks", $"/Create /TN \"{newTask}\" /XML \"{tmpXml}\" /F");
 
-            Append("Silent SYSTEM-level scheduled task installed.");
+            try { File.Delete(tmpXml); } catch { }
+
+            Append("Per-user hidden scheduled task installed.");
         }
 
         private void RemoveAllLegacyTasks()
@@ -242,7 +358,7 @@ namespace WOLe.Provisioner.Services
         }
 
         // ------------------------------------------------------------
-        //  FIREWALL (UPDATED CLEANUP)
+        //  FIREWALL (config.json-based port cleanup, URL ACL handling)
         // ------------------------------------------------------------
 
         private void InstallFirewallRule(ProvisioningConfig cfg, WizardMode mode)
@@ -270,6 +386,16 @@ namespace WOLe.Provisioner.Services
                             $"dir=in action=allow protocol=TCP localport={pc.Port} profile=private enable=yes");
 
                         Append($"Firewall port rule added for PC port {pc.Port}");
+
+                        try
+                        {
+                            AddUrlAcl(pc.Port);
+                            Append($"URL ACL added for port {pc.Port}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Append($"WARN: URL ACL add failed for port {pc.Port}: {ex.Message} (requires admin)");
+                        }
                     }
                 }
             }
@@ -284,6 +410,16 @@ namespace WOLe.Provisioner.Services
                     $"dir=in action=allow protocol=TCP localport={shutdownPort} profile=private enable=yes");
 
                 Append($"Firewall port rule added for shutdown-only port {shutdownPort}");
+
+                try
+                {
+                    AddUrlAcl(shutdownPort);
+                    Append($"URL ACL added for shutdown port {shutdownPort}");
+                }
+                catch (Exception ex)
+                {
+                    Append($"WARN: URL ACL add failed for shutdown port {shutdownPort}: {ex.Message} (requires admin)");
+                }
             }
 
             Append("Firewall configuration complete.");
@@ -293,13 +429,69 @@ namespace WOLe.Provisioner.Services
         {
             Append("Removing firewall rules (if exist)...");
 
-            // Remove program-based rules
-            RunCommand("netsh", "advfirewall firewall delete rule name=\"WOL-e Actions Server\"");
-            RunCommand("netsh", "advfirewall firewall delete rule name=\"WOL-e Shutdown Server\"");
+            // Remove program-based rules (by program path)
+            RunCommand("netsh", $"advfirewall firewall delete rule name=\"WOL-e Actions Server\" program=\"{ServerExePath}\"");
+            RunCommand("netsh", $"advfirewall firewall delete rule name=\"WOL-e Shutdown Server\" program=\"{ServerExePath}\"");
 
-            // Remove dynamic port rules (prefix match)
-            RunCommand("netsh", "advfirewall firewall delete rule name=\"WOL-e Actions Server Port\"");
-            RunCommand("netsh", "advfirewall firewall delete rule name=\"WOL-e Shutdown Server Port\"");
+            // Read config.json to find the port and remove its rules and URL ACL
+            try
+            {
+                string configPath = Path.Combine(ActionsServiceRoot, "config.json");
+
+                if (File.Exists(configPath))
+                {
+                    string json = File.ReadAllText(configPath);
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("port", out var portProp) &&
+                        portProp.ValueKind == JsonValueKind.Number)
+                    {
+                        int port = portProp.GetInt32();
+
+                        RunCommand("netsh", $"advfirewall firewall delete rule name=\"WOL-e Actions Server Port {port}\"");
+                        RunCommand("netsh", $"advfirewall firewall delete rule name=\"WOL-e Shutdown Server Port {port}\"");
+                        RunCommand("netsh", $"advfirewall firewall delete rule protocol=TCP localport={port}");
+                        Append($"Removed firewall rules for port {port}");
+
+                        try
+                        {
+                            RemoveUrlAcl(port);
+                            Append($"Removed URL ACL for port {port}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Append($"WARN: RemoveUrlAcl failed for port {port}: {ex.Message} (requires admin)");
+                        }
+                    }
+                }
+                else
+                {
+                    // config.json not found — best-effort fallback on default port
+                    Append("config.json not found — attempting fallback removal on port 5050.");
+                    RunCommand("netsh", "advfirewall firewall delete rule name=\"WOL-e Actions Server Port 5050\"");
+                    RunCommand("netsh", "advfirewall firewall delete rule name=\"WOL-e Shutdown Server Port 5050\"");
+                }
+            }
+            catch (Exception ex)
+            {
+                Append("ERR while removing firewall rules: " + ex.Message);
+            }
+        }
+
+        // ------------------------------------------------------------
+        //  URL ACL helpers (require admin elevation to succeed)
+        // ------------------------------------------------------------
+
+        private void AddUrlAcl(int port)
+        {
+            string user = $"{Environment.UserDomainName}\\{Environment.UserName}";
+            RunCommand("netsh", $"http add urlacl url=http://+:{port}/ user=\"{user}\"");
+        }
+
+        private void RemoveUrlAcl(int port)
+        {
+            RunCommand("netsh", $"http delete urlacl url=http://+:{port}/");
         }
 
         // ------------------------------------------------------------

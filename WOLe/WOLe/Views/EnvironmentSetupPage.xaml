@@ -3,67 +3,57 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <Grid Padding="32">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Padding="32">
+            <StackPanel Spacing="28"
+                        MaxWidth="720"
+                        HorizontalAlignment="Center">
 
-        <StackPanel Spacing="28"
-                    MaxWidth="720"
-                    MinWidth="600"
-                    HorizontalAlignment="Center">
+                <TextBlock Text="Environment Setup"
+                           Style="{StaticResource PageTitleStyle}"
+                           Margin="0,48,0,0" />
 
-            <!-- PAGE TITLE -->
-            <TextBlock Text="Environment Setup"
-                       Style="{StaticResource PageTitleStyle}"
-                       Margin="0,48,0,0" />
+                <TextBlock Text="This will install WOL-e required libraries, ensuring your system is ready for firmware flashing."
+                           Style="{StaticResource PageIntroStyle}"
+                           TextAlignment="Center"
+                           MaxWidth="720" />
 
-            <!-- DESCRIPTION -->
-            <TextBlock Text="This will install WOL-e required libraries, ensuring your system is ready for firmware flashing."
-                       Style="{StaticResource PageIntroStyle}"
-                       TextAlignment="Center"
-                       MaxWidth="720" />
+                <Border BorderBrush="{ThemeResource ConfigDividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="8"
+                        Height="300">
+                    <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+                        <TextBox x:Name="LogTextBox"
+                                 IsReadOnly="True"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 FontFamily="Consolas" />
+                    </ScrollViewer>
+                </Border>
 
-            <!-- LOG OUTPUT -->
-            <Border BorderBrush="{ThemeResource ConfigDividerBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8"
-                    Height="300">
+                <ProgressBar x:Name="Progress"
+                             Height="6"
+                             Minimum="0"
+                             Maximum="100"
+                             Visibility="Collapsed"
+                             Foreground="{ThemeResource ConfigAccentBrush}" />
 
-                <ScrollViewer x:Name="LogScroll"
-                              VerticalScrollBarVisibility="Auto">
+                <Button x:Name="SetupButton"
+                        Content="Run Environment Setup"
+                        HorizontalAlignment="Center"
+                        Width="260"
+                        Height="44"
+                        Click="SetupButton_Click" />
 
-                    <TextBox x:Name="LogTextBox"
-                             IsReadOnly="True"
-                             TextWrapping="Wrap"
-                             AcceptsReturn="True"
-                             FontFamily="Consolas" />
-                </ScrollViewer>
-            </Border>
+                <TextBlock x:Name="ErrorText"
+                           Style="{StaticResource ConfigBodyTextStyle}"
+                           Foreground="{ThemeResource ConfigErrorBrush}"
+                           Visibility="Collapsed"
+                           TextAlignment="Center"
+                           Margin="0,8,0,0" />
 
-            <!-- PROGRESS BAR -->
-            <ProgressBar x:Name="Progress"
-                         Height="6"
-                         Minimum="0"
-                         Maximum="100"
-                         Visibility="Collapsed"
-                         Foreground="{ThemeResource ConfigAccentBrush}" />
-
-            <!-- SETUP BUTTON -->
-            <Button x:Name="SetupButton"
-                    Content="Run Environment Setup"
-                    HorizontalAlignment="Center"
-                    Width="260"
-                    Height="44"
-                    Click="SetupButton_Click" />
-
-            <!-- ERROR TEXT (NEW) -->
-            <TextBlock x:Name="ErrorText"
-                       Style="{StaticResource ConfigBodyTextStyle}"
-                       Foreground="{ThemeResource ConfigErrorBrush}"
-                       Visibility="Collapsed"
-                       TextAlignment="Center"
-                       Margin="0,8,0,0" />
-
-        </StackPanel>
-
-    </Grid>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
 </Page>

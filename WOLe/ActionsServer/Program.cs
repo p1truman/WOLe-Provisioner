@@ -136,11 +136,11 @@ namespace WOLe.ActionsServer
 
                     switch (action.ToLowerInvariant())
                     {
-                        case "shutdown": path = "/shutdown"; break;
-                        case "restart": path = "/restart"; break;
-                        case "sleep": path = "/sleep"; break;
+                        case "shutdown":  path = "/shutdown";  break;
+                        case "restart":   path = "/restart";   break;
+                        case "sleep":     path = "/sleep";     break;
                         case "hibernate": path = "/hibernate"; break;
-                        case "lock": path = "/lock"; break;
+                        case "lock":      path = "/lock";      break;
                         case "screenoff": path = "/screenoff"; break;
                         case "launchapp1": path = "/launchapp1"; break;
                         case "launchapp2": path = "/launchapp2"; break;
@@ -187,12 +187,15 @@ namespace WOLe.ActionsServer
                 switch (path.ToLowerInvariant())
                 {
                     case "/shutdown":
-                        RunCommand("shutdown", "/s /t 0");
+                        // /f forces apps to close without waiting for user confirmation —
+                        // required when the session is locked and no interactive user can respond.
+                        RunCommand("shutdown", "/s /t 0 /f");
                         WriteResponse(response, 200, "SHUTDOWN");
                         return;
 
                     case "/restart":
-                        RunCommand("shutdown", "/r /t 0");
+                        // /f same reason as shutdown above.
+                        RunCommand("shutdown", "/r /t 0 /f");
                         WriteResponse(response, 200, "RESTART");
                         return;
 
@@ -202,7 +205,7 @@ namespace WOLe.ActionsServer
                         return;
 
                     case "/hibernate":
-                        RunCommand("shutdown", "/h /t 0");
+                        RunCommand("shutdown", "/h /f");
                         WriteResponse(response, 200, "HIBERNATE");
                         return;
 
@@ -253,8 +256,7 @@ namespace WOLe.ActionsServer
             catch (Exception ex)
             {
                 Log("ERR: " + ex);
-                try { WriteResponse(context.Response, 500, "ERROR"); }
-                catch { }
+                try { WriteResponse(context.Response, 500, "ERROR"); } catch { }
             }
         }
 

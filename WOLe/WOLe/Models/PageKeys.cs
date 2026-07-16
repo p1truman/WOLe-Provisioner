@@ -14,7 +14,6 @@ namespace WOLe.Provisioner.Models
         public static readonly Type ShutdownSecretPage   = typeof(WOLe.Provisioner.Views.ShutdownSecretPage);
         public static readonly Type ShutdownInstallPage  = typeof(WOLe.Provisioner.Views.ShutdownInstallPage);
         public static readonly Type EnvironmentSetupPage = typeof(WOLe.Provisioner.Views.EnvironmentSetupPage);
-        public static readonly Type FirmwarePage         = typeof(WOLe.Provisioner.Views.FirmwarePage);
         public static readonly Type FlashFirmwarePage    = typeof(WOLe.Provisioner.Views.FlashFirmwarePage);
         public static readonly Type FinalPage            = typeof(WOLe.Provisioner.Views.FinalPage);
         public static readonly Type ShutdownPcConfigPage = typeof(WOLe.Provisioner.Views.ShutdownPcConfigPage);

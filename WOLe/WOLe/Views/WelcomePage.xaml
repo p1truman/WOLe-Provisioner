@@ -14,20 +14,17 @@
                     <SolidColorBrush x:Key="CardSubtextBrush" Color="#D0D0D0" />
                     <SolidColorBrush x:Key="CardNumberBrush" Color="#0cd3f7" />
                     <SolidColorBrush x:Key="CardTickBrush" Color="#39FF14" />
-
                     <SolidColorBrush x:Key="CardButtonBackgroundBrush" Color="#0D0D0D" />
                     <SolidColorBrush x:Key="CardButtonBackgroundPointerOverBrush" Color="#151515" />
                     <SolidColorBrush x:Key="CardButtonBackgroundPressedBrush" Color="#1E1E1E" />
                     <SolidColorBrush x:Key="CardButtonBorderBrush" Color="#242424" />
                     <SolidColorBrush x:Key="CardButtonBorderPointerOverBrush" Color="#363636" />
                 </ResourceDictionary>
-
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="CardHeaderBrush" Color="#111111" />
                     <SolidColorBrush x:Key="CardSubtextBrush" Color="#555555" />
                     <SolidColorBrush x:Key="CardNumberBrush" Color="#0cd3f7" />
                     <SolidColorBrush x:Key="CardTickBrush" Color="#00AA44" />
-
                     <SolidColorBrush x:Key="CardButtonBackgroundBrush" Color="#FAFAFA" />
                     <SolidColorBrush x:Key="CardButtonBackgroundPointerOverBrush" Color="#F2F2F2" />
                     <SolidColorBrush x:Key="CardButtonBackgroundPressedBrush" Color="#EBEBEB" />
@@ -55,41 +52,33 @@
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="{TemplateBinding CornerRadius}">
-
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">
                                         <VisualState x:Name="Normal" />
-
                                         <VisualState x:Name="PointerOver">
                                             <Storyboard>
                                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootBorder"
                                                                                Storyboard.TargetProperty="Background">
-                                                    <DiscreteObjectKeyFrame KeyTime="0"
-                                                                            Value="{ThemeResource CardButtonBackgroundPointerOverBrush}" />
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource CardButtonBackgroundPointerOverBrush}" />
                                                 </ObjectAnimationUsingKeyFrames>
                                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootBorder"
                                                                                Storyboard.TargetProperty="BorderBrush">
-                                                    <DiscreteObjectKeyFrame KeyTime="0"
-                                                                            Value="{ThemeResource CardButtonBorderPointerOverBrush}" />
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource CardButtonBorderPointerOverBrush}" />
                                                 </ObjectAnimationUsingKeyFrames>
                                             </Storyboard>
                                         </VisualState>
-
                                         <VisualState x:Name="Pressed">
                                             <Storyboard>
                                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootBorder"
                                                                                Storyboard.TargetProperty="Background">
-                                                    <DiscreteObjectKeyFrame KeyTime="0"
-                                                                            Value="{ThemeResource CardButtonBackgroundPressedBrush}" />
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource CardButtonBackgroundPressedBrush}" />
                                                 </ObjectAnimationUsingKeyFrames>
                                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootBorder"
                                                                                Storyboard.TargetProperty="BorderBrush">
-                                                    <DiscreteObjectKeyFrame KeyTime="0"
-                                                                            Value="{ThemeResource CardButtonBorderPointerOverBrush}" />
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource CardButtonBorderPointerOverBrush}" />
                                                 </ObjectAnimationUsingKeyFrames>
                                             </Storyboard>
                                         </VisualState>
-
                                         <VisualState x:Name="Disabled">
                                             <Storyboard>
                                                 <DoubleAnimation Storyboard.TargetName="RootBorder"
@@ -100,7 +89,6 @@
                                         </VisualState>
                                     </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>
-
                                 <ContentPresenter Content="{TemplateBinding Content}"
                                                   ContentTemplate="{TemplateBinding ContentTemplate}"
                                                   ContentTransitions="{TemplateBinding ContentTransitions}"
@@ -161,218 +149,150 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0"
-              Margin="20,8,20,-14">
+        <Grid Grid.Row="0" Margin="20,8,20,-14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-
             <Image x:Name="WelcomeLogo"
                    Grid.Column="0"
-                   Width="210"
-                   Height="96"
+                   Width="210" Height="96"
                    Stretch="Uniform"
                    HorizontalAlignment="Left"
                    VerticalAlignment="Top"
                    Margin="0,0,6,0" />
-
             <Image x:Name="CompatibilityImage"
                    Grid.Column="1"
-                   Width="225"
-                   Height="96"
+                   Width="225" Height="96"
                    Stretch="Uniform"
                    HorizontalAlignment="Right"
                    VerticalAlignment="Top"
                    Margin="6,0,0,0" />
         </Grid>
 
-        <StackPanel Grid.Row="1"
-                    Spacing="16"
-                    MaxWidth="980"
-                    HorizontalAlignment="Center">
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="16"
+                        MaxWidth="980"
+                        HorizontalAlignment="Center">
 
-            <TextBlock Text="Welcome to WOL-e Setup"
-                       FontSize="32"
-                       FontWeight="SemiBold"
-                       HorizontalAlignment="Center"
-                       Margin="0,0,0,0" />
+                <TextBlock Text="Welcome to WOL-e Setup"
+                           FontSize="32"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,0" />
 
-            <TextBlock Text="Let's dive in! Complete the steps below (1 → 3 are mandatory for first-time users)."
-                       FontSize="16"
-                       TextWrapping="Wrap"
-                       Opacity="0.85"
-                       TextAlignment="Center"
-                       Margin="0,6,0,16" />
+                <TextBlock Text="Let's dive in! Complete the steps below (1 → 3 are mandatory for first-time users)."
+                           FontSize="16"
+                           TextWrapping="Wrap"
+                           Opacity="0.85"
+                           TextAlignment="Center"
+                           Margin="0,6,0,16" />
 
-            <Button x:Name="SystemConfigCard"
-                    Style="{StaticResource CardButtonStyle}"
-                    Click="SystemConfig_Click">
-                <Grid Padding="18,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="58" />
-                        <ColumnDefinition Width="56" />
-                        <ColumnDefinition Width="18" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <Button x:Name="SystemConfigCard"
+                        Style="{StaticResource CardButtonStyle}"
+                        Click="SystemConfig_Click">
+                    <Grid Padding="18,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="58" />
+                            <ColumnDefinition Width="56" />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="1" Style="{StaticResource CardNumberStyle}" />
+                        <FontIcon Grid.Column="1" Glyph="&#xE713;" Style="{StaticResource CardStepIconStyle}" />
+                        <StackPanel Grid.Column="3" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="System Configuration" Style="{StaticResource CardHeaderStyle}" />
+                            <TextBlock Text="First up, we'll need to check your BIOS and modify some network settings." Style="{StaticResource CardSubtextStyle}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon x:Name="SystemConfigCompleteIcon" Style="{StaticResource CardCompleteIconStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
 
-                    <TextBlock Grid.Column="0"
-                               Text="1"
-                               Style="{StaticResource CardNumberStyle}" />
+                <Button x:Name="SinricAccountCard"
+                        Style="{StaticResource CardButtonStyle}"
+                        Click="SinricAccount_Click">
+                    <Grid Padding="18,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="58" />
+                            <ColumnDefinition Width="56" />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="2" Style="{StaticResource CardNumberStyle}" />
+                        <FontIcon Grid.Column="1" Glyph="&#xE8FA;" Style="{StaticResource CardStepIconStyle}" />
+                        <StackPanel Grid.Column="3" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="Sinric Pro Account Creation" Style="{StaticResource CardHeaderStyle}" />
+                            <TextBlock Text="Create a Sinric Pro account, add devices and return here once your account is active." Style="{StaticResource CardSubtextStyle}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon x:Name="SinricAccountCompleteIcon" Style="{StaticResource CardCompleteIconStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
 
-                    <FontIcon Grid.Column="1"
-                              Glyph="&#xE713;"
-                              Style="{StaticResource CardStepIconStyle}" />
+                <Button x:Name="WoleSetupCard"
+                        Style="{StaticResource CardButtonStyle}"
+                        Click="WoleSetup_Click">
+                    <Grid Padding="18,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="58" />
+                            <ColumnDefinition Width="56" />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="3" Style="{StaticResource CardNumberStyle}" />
+                        <FontIcon Grid.Column="1" Glyph="&#xE896;" Style="{StaticResource CardStepIconStyle}" />
+                        <StackPanel Grid.Column="3" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="WOL-e Device Setup" Style="{StaticResource CardHeaderStyle}" />
+                            <TextBlock Text="Connect, configure and flash your WOL-e device." Style="{StaticResource CardSubtextStyle}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon x:Name="WoleSetupCompleteIcon" Style="{StaticResource CardCompleteIconStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
 
-                    <StackPanel Grid.Column="3"
-                                Spacing="2"
-                                VerticalAlignment="Center">
-                        <TextBlock Text="System Configuration"
-                                   Style="{StaticResource CardHeaderStyle}" />
-                        <TextBlock Text="First up, we'll need to check your BIOS and modify some network settings."
-                                   Style="{StaticResource CardSubtextStyle}" />
-                    </StackPanel>
+                <Button x:Name="EnhancedActionsCard"
+                        Style="{StaticResource CardButtonStyle}"
+                        Click="EnhancedActions_Click">
+                    <Grid Padding="18,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="58" />
+                            <ColumnDefinition Width="56" />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="4" Style="{StaticResource CardNumberStyle}" />
+                        <FontIcon Grid.Column="1" Glyph="&#xE7F8;" Style="{StaticResource CardStepIconStyle}" />
+                        <StackPanel Grid.Column="3" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="Enhanced Actions Installer" Style="{StaticResource CardHeaderStyle}" />
+                            <TextBlock Text="A dedicated actions installer for other machines within your WOL-e network." Style="{StaticResource CardSubtextStyle}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <FontIcon x:Name="EnhancedActionsCompleteIcon" Style="{StaticResource CardCompleteIconStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Button>
 
-                    <StackPanel Grid.Column="4"
-                                Orientation="Horizontal"
-                                Spacing="12"
-                                VerticalAlignment="Center">
-                        <FontIcon x:Name="SystemConfigCompleteIcon"
-                                  Style="{StaticResource CardCompleteIconStyle}" />
-                    </StackPanel>
-                </Grid>
-            </Button>
-
-            <Button x:Name="SinricAccountCard"
-                    Style="{StaticResource CardButtonStyle}"
-                    Click="SinricAccount_Click">
-                <Grid Padding="18,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="58" />
-                        <ColumnDefinition Width="56" />
-                        <ColumnDefinition Width="18" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0"
-                               Text="2"
-                               Style="{StaticResource CardNumberStyle}" />
-
-                    <FontIcon Grid.Column="1"
-                              Glyph="&#xE8FA;"
-                              Style="{StaticResource CardStepIconStyle}" />
-
-                    <StackPanel Grid.Column="3"
-                                Spacing="2"
-                                VerticalAlignment="Center">
-                        <TextBlock Text="Sinric Pro Account Creation"
-                                   Style="{StaticResource CardHeaderStyle}" />
-                        <TextBlock Text="Create a Sinric Pro account, add devices and return here once your account is active."
-                                   Style="{StaticResource CardSubtextStyle}" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="4"
-                                Orientation="Horizontal"
-                                Spacing="12"
-                                VerticalAlignment="Center">
-                        <FontIcon x:Name="SinricAccountCompleteIcon"
-                                  Style="{StaticResource CardCompleteIconStyle}" />
-                    </StackPanel>
-                </Grid>
-            </Button>
-
-            <Button x:Name="WoleSetupCard"
-                    Style="{StaticResource CardButtonStyle}"
-                    Click="WoleSetup_Click">
-                <Grid Padding="18,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="58" />
-                        <ColumnDefinition Width="56" />
-                        <ColumnDefinition Width="18" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0"
-                               Text="3"
-                               Style="{StaticResource CardNumberStyle}" />
-
-                    <FontIcon Grid.Column="1"
-                              Glyph="&#xE896;"
-                              Style="{StaticResource CardStepIconStyle}" />
-
-                    <StackPanel Grid.Column="3"
-                                Spacing="2"
-                                VerticalAlignment="Center">
-                        <TextBlock Text="WOL-e Device Setup"
-                                   Style="{StaticResource CardHeaderStyle}" />
-                        <TextBlock Text="Connect, configure and flash your WOL-e device."
-                                   Style="{StaticResource CardSubtextStyle}" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="4"
-                                Orientation="Horizontal"
-                                Spacing="12"
-                                VerticalAlignment="Center">
-                        <FontIcon x:Name="WoleSetupCompleteIcon"
-                                  Style="{StaticResource CardCompleteIconStyle}" />
-                    </StackPanel>
-                </Grid>
-            </Button>
-
-            <Button x:Name="EnhancedActionsCard"
-                    Style="{StaticResource CardButtonStyle}"
-                    Click="EnhancedActions_Click">
-                <Grid Padding="18,10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="58" />
-                        <ColumnDefinition Width="56" />
-                        <ColumnDefinition Width="18" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0"
-                               Text="4"
-                               Style="{StaticResource CardNumberStyle}" />
-
-                    <FontIcon Grid.Column="1"
-                              Glyph="&#xE7F8;"
-                              Style="{StaticResource CardStepIconStyle}" />
-
-                    <StackPanel Grid.Column="3"
-                                Spacing="2"
-                                VerticalAlignment="Center">
-                        <TextBlock Text="Enhanced Actions Installer"
-                                   Style="{StaticResource CardHeaderStyle}" />
-                        <TextBlock Text="A dedicated actions installer for other machines within your WOL-e network."
-                                   Style="{StaticResource CardSubtextStyle}" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="4"
-                                Orientation="Horizontal"
-                                Spacing="12"
-                                VerticalAlignment="Center">
-                        <FontIcon x:Name="EnhancedActionsCompleteIcon"
-                                  Style="{StaticResource CardCompleteIconStyle}" />
-                    </StackPanel>
-                </Grid>
-            </Button>
-
-        </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
 
         <StackPanel Grid.Row="2"
                     Spacing="4"
                     HorizontalAlignment="Center"
                     Margin="0,24,0,0">
-
             <Rectangle Width="120"
                        Height="1"
                        Opacity="0.18"
                        Fill="{ThemeResource CardHeaderBrush}" />
-
             <HyperlinkButton Content="www.wol-e.co.uk"
                              NavigateUri="https://www.wol-e.co.uk"
                              HorizontalAlignment="Center"
@@ -380,7 +300,7 @@
                              Opacity="0.85"
                              Padding="0"
                              Foreground="{ThemeResource CardSubtextBrush}" />
-
         </StackPanel>
+
     </Grid>
 </Page>
