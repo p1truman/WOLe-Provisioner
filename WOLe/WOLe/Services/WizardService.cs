@@ -19,7 +19,6 @@ namespace WOLe.Provisioner.Services
             PageKeys.ActionSwitchPage,
             PageKeys.ShutdownInstallPage,
             PageKeys.EnvironmentSetupPage,
-            PageKeys.FirmwarePage,
             PageKeys.FlashFirmwarePage,
             PageKeys.FinalPage
         };

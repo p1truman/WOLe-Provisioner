@@ -127,6 +127,8 @@ namespace WOLe.Provisioner.Services
 
         /// <summary>
         /// Populates a ComboBox with discovered app entries and pre-selects the saved path if present.
+        /// If no path is set, nothing is selected — index 0 is never defaulted to, as that would
+        /// silently write the first app in the list into the path even though the user never chose it.
         /// </summary>
         internal static void PopulateAppComboBox(
             ComboBox combo,
@@ -140,6 +142,7 @@ namespace WOLe.Provisioner.Services
 
             if (!string.IsNullOrWhiteSpace(currentPath))
             {
+                // Try to find the saved path in the discovered apps list
                 foreach (var item in combo.Items)
                 {
                     if (item is ComboBoxItem cbi && cbi.Tag is string path && path == currentPath)
@@ -148,10 +151,18 @@ namespace WOLe.Provisioner.Services
                         return;
                     }
                 }
+
+                // currentPath was set but not found in the discovered list (e.g. custom/browsed path)
+                // — insert it so the user can see what was previously selected
+                var name = System.IO.Path.GetFileNameWithoutExtension(currentPath);
+                var customItem = new ComboBoxItem { Content = $"{name} (custom)", Tag = currentPath };
+                combo.Items.Insert(0, customItem);
+                combo.SelectedItem = customItem;
             }
 
-            if (combo.Items.Count > 0)
-                combo.SelectedIndex = 0;
+            // If no path is set, leave the combo with nothing selected.
+            // Do NOT default to index 0 — that would silently write the first
+            // app in the list into the path even though the user never chose it.
         }
 
         /// <summary>

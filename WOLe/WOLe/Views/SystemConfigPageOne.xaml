@@ -176,7 +176,7 @@
                                    TextAlignment="Left"
                                    Margin="0,0,0,10" />
 
-                        <controls:UnifiedProvisioningControl />
+                        <controls:UnifiedProvisioningControl x:Name="UnifiedProvisioningControl" />
                     </StackPanel>
                 </Border>
 

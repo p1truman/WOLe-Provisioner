@@ -16,13 +16,21 @@ namespace WOLe.Provisioner.Controls
 {
     public sealed partial class UnifiedProvisioningControl : UserControl
     {
+        // ----------------------------------------------------------------
+        //  Fired ONLY when the user clicks Optimise (EnableWol_Click).
+        //  SystemConfigPageOne subscribes to forward values into
+        //  ProvisioningState for the appropriate wizard flow.
+        //  Apply (static IP) does NOT fire these events.
+        // ----------------------------------------------------------------
+        public event Action<string>? ProvisionedIpChanged;
+        public event Action<string>? ProvisionedMacChanged;
+
         private class NetAdapterInfo
         {
             public string Name { get; set; } = string.Empty;
             public string InterfaceDescription { get; set; } = string.Empty;
             public string InterfaceAlias { get; set; } = string.Empty;
             public string DeviceID { get; set; } = string.Empty;
-
             public string DisplayName => $"{Name} ({InterfaceDescription})";
         }
 
@@ -31,11 +39,8 @@ namespace WOLe.Provisioner.Controls
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Temp", "WOL-e", "Network");
 
-        private string TempScriptPath =>
-            Path.Combine(_baseTempFolder, "temp.ps1");
-
-        private string LogPath =>
-            Path.Combine(_baseTempFolder, "pslog.txt");
+        private string TempScriptPath => Path.Combine(_baseTempFolder, "temp.ps1");
+        private string LogPath => Path.Combine(_baseTempFolder, "pslog.txt");
 
         private List<NetAdapterInfo> _adapters = new();
 
@@ -73,24 +78,21 @@ namespace WOLe.Provisioner.Controls
         {
             StatusText.Text = message;
             var brush = TryGetBrush("StatusNeutralBrush");
-            if (brush != null)
-                StatusText.Foreground = brush;
+            if (brush != null) StatusText.Foreground = brush;
         }
 
         private void SetStatusSuccess(string message)
         {
             StatusText.Text = message;
             var brush = TryGetBrush("StatusSuccessBrush");
-            if (brush != null)
-                StatusText.Foreground = brush;
+            if (brush != null) StatusText.Foreground = brush;
         }
 
         private void SetStatusError(string message)
         {
             StatusText.Text = message;
             var brush = TryGetBrush("StatusErrorBrush");
-            if (brush != null)
-                StatusText.Foreground = brush;
+            if (brush != null) StatusText.Foreground = brush;
         }
 
         private async Task LoadAdaptersAsync()
@@ -109,9 +111,7 @@ namespace WOLe.Provisioner.Controls
                 }
 
                 if (json.TrimStart().StartsWith("["))
-                {
                     _adapters = JsonSerializer.Deserialize<List<NetAdapterInfo>>(json) ?? new List<NetAdapterInfo>();
-                }
                 else
                 {
                     var single = JsonSerializer.Deserialize<NetAdapterInfo>(json);
@@ -204,9 +204,7 @@ namespace WOLe.Provisioner.Controls
                         int.TryParse(parts[3], out _octet4))
                     {
                         _prefixLength = ipv4.PrefixLength;
-
                         _gatewayIp = DetectGateway(selected.InterfaceDescription, _octet1, _octet2, _octet3);
-
                         IpPrefixText.Text = $"{_octet1} . {_octet2} . {_octet3} .";
                         IpOctet4Box.Text = _octet4.ToString();
                     }
@@ -254,7 +252,7 @@ namespace WOLe.Provisioner.Controls
             string escapedDesc = desc.Replace("'", "''");
 
             string gw = RunPowerShellCapture(
-                $"(Get-NetRoute -DestinationPrefix \"0.0.0.0/0\" | Where-Object {{$_.InterfaceDescription -eq '{escapedDesc}'}} | Select-Object -ExpandProperty NextHop -ErrorAction SilentlyContinue)"
+                $"(Get-NetRoute -DestinationPrefix \"0.0.0.0/0\" | Where-Object {{$_.InterfaceDescription -eq '{escapedDesc}'}} | Select-Object -ExpandProperty NextHop -ErrorAction SilentlyContinue | Select-Object -First 1)"
             ).Trim();
 
             if (string.IsNullOrWhiteSpace(gw) || gw.Contains("MSFT"))
@@ -274,37 +272,25 @@ namespace WOLe.Provisioner.Controls
 
         private void IpOctet4Box_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (IpOctet4Box == null)
-                return;
+            if (IpOctet4Box == null) return;
 
             string text = IpOctet4Box.Text.Trim();
 
-            if (string.IsNullOrEmpty(text))
-            {
-                SetStatusError("Please enter a number between 2 and 254.");
-                return;
-            }
-
-            if (!int.TryParse(text, out int last))
-            {
-                SetStatusError("Please enter a number between 2 and 254.");
-                return;
-            }
-
-            if (last < 2 || last > 254)
+            if (string.IsNullOrEmpty(text) || !int.TryParse(text, out int last) || last < 2 || last > 254)
             {
                 SetStatusError("Please enter a number between 2 and 254.");
                 return;
             }
 
             if (StatusText.Text == "Please enter a number between 2 and 254.")
-            {
                 SetStatusNeutral(string.Empty);
-            }
 
             _octet4 = last;
         }
 
+        // ----------------------------------------------------------------
+        //  Apply — sets static IP only. Does NOT fire forwarding events.
+        // ----------------------------------------------------------------
         private void ApplyManualStaticIp_Click(object sender, RoutedEventArgs e)
         {
             if (AdapterSelector.SelectedItem is not NetAdapterInfo selected)
@@ -383,8 +369,16 @@ Enable-NetAdapter -Name $ifName -Confirm:$false -ErrorAction SilentlyContinue
             IpAddressText.Text = $"IPv4: {newIp}";
             GatewayText.Text = $"Gateway: {gatewayIp}";
             SetStatusSuccess($"Static IP applied: {newIp}");
+
+            // Apply does NOT fire ProvisionedIpChanged or ProvisionedMacChanged.
+            // Forwarding only happens when the user clicks Optimise.
         }
 
+        // ----------------------------------------------------------------
+        //  Optimise — configures WOL and fires forwarding events.
+        //  Reads the currently displayed IP and MAC (which reflects either
+        //  the applied static IP or the existing adapter address).
+        // ----------------------------------------------------------------
         private void EnableWol_Click(object sender, RoutedEventArgs e)
         {
             if (AdapterSelector.SelectedItem is not NetAdapterInfo selected)
@@ -429,14 +423,9 @@ Write-Output ""Resolved adapter ifIndex:     $ifIndex""
 
 function Get-PowerCfgList {
     param([string]$QueryType)
-
     try {
         $raw = & powercfg -devicequery $QueryType 2>&1 | Out-String
-
-        if ([string]::IsNullOrWhiteSpace($raw)) {
-            return @()
-        }
-
+        if ([string]::IsNullOrWhiteSpace($raw)) { return @() }
         $lines = $raw -split ""`r?`n"" |
             ForEach-Object { $_.Trim() } |
             Where-Object {
@@ -445,126 +434,59 @@ function Get-PowerCfgList {
                 $_ -notmatch '^The following devices' -and
                 $_ -notmatch '^Currently there are no wake'
             }
-
         return @($lines)
     }
-    catch {
-        return @()
-    }
+    catch { return @() }
 }
 
 function Write-PowerCfgListToLog {
     param([string]$QueryType)
-
     $items = @(Get-PowerCfgList $QueryType)
-
     Write-Output (""POWERCFG LIST {0}:"" -f $QueryType)
-    if ($items.Count -eq 0) {
-        Write-Output '  <none>'
-    }
-    else {
-        foreach ($item in $items) {
-            Write-Output (""  {0}"" -f $item)
-        }
-    }
+    if ($items.Count -eq 0) { Write-Output '  <none>' }
+    else { foreach ($item in $items) { Write-Output (""  {0}"" -f $item) } }
 }
 
 function Resolve-PowerCfgDeviceName {
-    param(
-        [string]$AdapterName,
-        [string]$AdapterDescription
-    )
-
+    param([string]$AdapterName, [string]$AdapterDescription)
     $allCandidates = @()
-
     foreach ($queryType in @('wake_programmable', 'wake_from_any', 'wake_armed')) {
         $items = @(Get-PowerCfgList $queryType)
-        foreach ($item in $items) {
-            $allCandidates += $item
-        }
+        foreach ($item in $items) { $allCandidates += $item }
     }
-
     $uniqueCandidates = @($allCandidates | Select-Object -Unique)
-
-    foreach ($candidate in $uniqueCandidates) {
-        if ($candidate -eq $AdapterDescription) { return [string]$candidate }
-    }
-    foreach ($candidate in $uniqueCandidates) {
-        if ($candidate -eq $AdapterName) { return [string]$candidate }
-    }
-    foreach ($candidate in $uniqueCandidates) {
-        if ($candidate -like ""*$AdapterDescription*"") { return [string]$candidate }
-    }
-    foreach ($candidate in $uniqueCandidates) {
-        if ($candidate -like ""*$AdapterName*"") { return [string]$candidate }
-    }
-
+    foreach ($candidate in $uniqueCandidates) { if ($candidate -eq $AdapterDescription) { return [string]$candidate } }
+    foreach ($candidate in $uniqueCandidates) { if ($candidate -eq $AdapterName) { return [string]$candidate } }
+    foreach ($candidate in $uniqueCandidates) { if ($candidate -like ""*$AdapterDescription*"") { return [string]$candidate } }
+    foreach ($candidate in $uniqueCandidates) { if ($candidate -like ""*$AdapterName*"") { return [string]$candidate } }
     return $null
 }
 
 function Test-PowerCfgContainsExact {
-    param(
-        [string]$QueryType,
-        [string]$Needle
-    )
-
-    if ([string]::IsNullOrWhiteSpace($Needle)) {
-        return $false
-    }
-
+    param([string]$QueryType, [string]$Needle)
+    if ([string]::IsNullOrWhiteSpace($Needle)) { return $false }
     $items = @(Get-PowerCfgList $QueryType)
-
-    foreach ($item in $items) {
-        if ($item -eq $Needle) {
-            return $true
-        }
-    }
-
+    foreach ($item in $items) { if ($item -eq $Needle) { return $true } }
     return $false
 }
 
 function Set-AdvPropIfFound {
-    param(
-        [string]$AdapterName,
-        [string[]]$NamePatterns,
-        [string[]]$EnableValues,
-        [string[]]$DisableValues,
-        [bool]$Enable
-    )
-
+    param([string]$AdapterName, [string[]]$NamePatterns, [string[]]$EnableValues, [string[]]$DisableValues, [bool]$Enable)
     $props = @(Get-NetAdapterAdvancedProperty -Name $AdapterName -ErrorAction SilentlyContinue)
-    if ($props.Count -eq 0) {
-        Write-Output ""Advanced properties unavailable for $AdapterName.""
+    if ($props.Count -eq 0) { Write-Output ""Advanced properties unavailable for $AdapterName.""; return $false }
+    $matched = @($props | Where-Object {
+        $dn = $_.DisplayName
+        if ([string]::IsNullOrWhiteSpace($dn)) { return $false }
+        foreach ($pattern in $NamePatterns) { if ($dn -like $pattern) { return $true } }
         return $false
-    }
-
-    $matched = @(
-        $props | Where-Object {
-            $dn = $_.DisplayName
-            if ([string]::IsNullOrWhiteSpace($dn)) { return $false }
-
-            foreach ($pattern in $NamePatterns) {
-                if ($dn -like $pattern) { return $true }
-            }
-
-            return $false
-        }
-    )
-
-    if ($matched.Count -eq 0) {
-        return $false
-    }
-
+    })
+    if ($matched.Count -eq 0) { return $false }
     $overallSuccess = $false
-
     foreach ($prop in $matched) {
         $displayName = [string]$prop.DisplayName
         $displayValue = [string]$prop.DisplayValue
-
         Write-Output ""Found advanced property: '$displayName' = '$displayValue'""
-
         $candidateValues = if ($Enable) { $EnableValues } else { $DisableValues }
-
         foreach ($value in $candidateValues) {
             try {
                 Set-NetAdapterAdvancedProperty -Name $AdapterName -DisplayName $displayName -DisplayValue $value -NoRestart -ErrorAction Stop | Out-Null
@@ -572,12 +494,9 @@ function Set-AdvPropIfFound {
                 $overallSuccess = $true
                 break
             }
-            catch {
-                Write-Output ""Attempt failed: '$displayName' -> '$value' : $($_.Exception.Message)""
-            }
+            catch { Write-Output ""Attempt failed: '$displayName' -> '$value' : $($_.Exception.Message)"" }
         }
     }
-
     return ([bool]$overallSuccess)
 }
 
@@ -608,9 +527,7 @@ if ($resolvedPowerCfgName) {
     $summary.PowerCfgResolvedDeviceName = [string]$resolvedPowerCfgName
     Write-Output ""Resolved powercfg device name: $resolvedPowerCfgName""
 }
-else {
-    Write-Output 'No matching powercfg device name was found.'
-}
+else { Write-Output 'No matching powercfg device name was found.' }
 
 $summary.WakeProgrammableBefore = [bool](Test-PowerCfgContainsExact -QueryType 'wake_programmable' -Needle $resolvedPowerCfgName)
 $summary.WakeFromAnyBefore      = [bool](Test-PowerCfgContainsExact -QueryType 'wake_from_any' -Needle $resolvedPowerCfgName)
@@ -623,46 +540,34 @@ Write-Output ""Wake armed before:        $($summary.WakeArmedBefore)""
 Write-Output '--- Querying advanced properties ---'
 try {
     $allProps = Get-NetAdapterAdvancedProperty -Name $ifName -ErrorAction SilentlyContinue
-    if ($allProps) {
-        foreach ($p in $allProps) {
-            Write-Output ""ADV PROP: $($p.DisplayName) = $($p.DisplayValue)""
-        }
-    }
-    else {
-        Write-Output 'No advanced properties returned.'
-    }
+    if ($allProps) { foreach ($p in $allProps) { Write-Output ""ADV PROP: $($p.DisplayName) = $($p.DisplayValue)"" } }
+    else { Write-Output 'No advanced properties returned.' }
 }
-catch {
-    Write-Output ""Unable to query advanced properties: $($_.Exception.Message)""
-}
+catch { Write-Output ""Unable to query advanced properties: $($_.Exception.Message)"" }
 
 $summary.MagicPacketPropertySet = [bool](Set-AdvPropIfFound `
     -AdapterName $ifName `
     -NamePatterns @('*Magic Packet*', '*Wake on Magic Packet*') `
     -EnableValues @('Enabled', 'Enable', 'On', '1', 'Magic Packet') `
-    -DisableValues @() `
-    -Enable $true)
+    -DisableValues @() -Enable $true)
 
 $summary.PatternWakeDisabled = [bool](Set-AdvPropIfFound `
     -AdapterName $ifName `
     -NamePatterns @('*Pattern*', '*Wake on pattern match*') `
     -EnableValues @() `
-    -DisableValues @('Disabled', 'Disable', 'Off', '0') `
-    -Enable $false)
+    -DisableValues @('Disabled', 'Disable', 'Off', '0') -Enable $false)
 
 $summary.LinkWakeDisabled = [bool](Set-AdvPropIfFound `
     -AdapterName $ifName `
     -NamePatterns @('*Wake on link*', '*Wake on Link*', '*Link Wake*', '*Wake on link settings*') `
     -EnableValues @() `
-    -DisableValues @('Disabled', 'Disable', 'Off', '0', 'Not Speed Down') `
-    -Enable $false)
+    -DisableValues @('Disabled', 'Disable', 'Off', '0', 'Not Speed Down') -Enable $false)
 
 $summary.ShutdownWakeConfigured = [bool](Set-AdvPropIfFound `
     -AdapterName $ifName `
     -NamePatterns @('*Shutdown Wake-On-Lan*', '*S5 Wake on LAN*', '*Wake From Shutdown*') `
     -EnableValues @('Enabled', 'Enable', 'On', '1', '10 Mbps First') `
-    -DisableValues @() `
-    -Enable $true)
+    -DisableValues @() -Enable $true)
 
 Write-Output '--- Applying adapter power management settings ---'
 try {
@@ -670,50 +575,34 @@ try {
     $summary.PowerManagementMagicPacketSet = $true
     Write-Output 'Set-NetAdapterPowerManagement WakeOnMagicPacket = Enabled'
 }
-catch {
-    Write-Output ""Failed to set WakeOnMagicPacket: $($_.Exception.Message)""
-}
+catch { Write-Output ""Failed to set WakeOnMagicPacket: $($_.Exception.Message)"" }
 
 try {
     Set-NetAdapterPowerManagement -Name $ifName -WakeOnPattern Disabled -ErrorAction Stop | Out-Null
     $summary.PowerManagementPatternDisabled = $true
     Write-Output 'Set-NetAdapterPowerManagement WakeOnPattern = Disabled'
 }
-catch {
-    Write-Output ""Failed to set WakeOnPattern: $($_.Exception.Message)""
-}
+catch { Write-Output ""Failed to set WakeOnPattern: $($_.Exception.Message)"" }
 
 Write-Output '--- Querying adapter power management ---'
 try {
     $pm = Get-NetAdapterPowerManagement -Name $ifName -ErrorAction SilentlyContinue
-    if ($pm) {
-        $pm | Format-List * | Out-String | Write-Output
-    }
-    else {
-        Write-Output 'Get-NetAdapterPowerManagement returned no data.'
-    }
+    if ($pm) { $pm | Format-List * | Out-String | Write-Output }
+    else { Write-Output 'Get-NetAdapterPowerManagement returned no data.' }
 }
-catch {
-    Write-Output ""Get-NetAdapterPowerManagement unavailable or failed: $($_.Exception.Message)""
-}
+catch { Write-Output ""Get-NetAdapterPowerManagement unavailable or failed: $($_.Exception.Message)"" }
 
 Write-Output '--- Enabling OS wake permission ---'
 if (-not [string]::IsNullOrWhiteSpace($resolvedPowerCfgName)) {
     try {
         $powerCfgOutput = & powercfg -deviceenablewake ""$resolvedPowerCfgName"" 2>&1 | Out-String
-        if (-not [string]::IsNullOrWhiteSpace($powerCfgOutput)) {
-            Write-Output $powerCfgOutput
-        }
+        if (-not [string]::IsNullOrWhiteSpace($powerCfgOutput)) { Write-Output $powerCfgOutput }
         $summary.WakeEnableIssued = $true
         Write-Output ""powercfg -deviceenablewake issued for: $resolvedPowerCfgName""
     }
-    catch {
-        Write-Output ""powercfg failed for resolved device '$resolvedPowerCfgName': $($_.Exception.Message)""
-    }
+    catch { Write-Output ""powercfg failed for resolved device '$resolvedPowerCfgName': $($_.Exception.Message)"" }
 }
-else {
-    Write-Output 'Skipping powercfg -deviceenablewake because no matching powercfg device name was found.'
-}
+else { Write-Output 'Skipping powercfg -deviceenablewake because no matching powercfg device name was found.' }
 
 Start-Sleep -Milliseconds 800
 
@@ -721,51 +610,30 @@ if (-not $summary.MagicPacketPropertySet) {
     Write-Output '--- Using limited registry fallback ---'
     try {
         $base = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}'
-        $keys = Get-ChildItem -Path $base -ErrorAction SilentlyContinue | Where-Object {
-            $_.PSChildName -match '^\d{4}$'
-        }
-
+        $keys = Get-ChildItem -Path $base -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' }
         $regPath = $null
-
         foreach ($k in $keys) {
             try {
                 $p = Get-ItemProperty -Path $k.PSPath -ErrorAction Stop
-                if ($p.DriverDesc -eq $ifDesc) {
-                    $regPath = $k.PSPath
-                    break
-                }
+                if ($p.DriverDesc -eq $ifDesc) { $regPath = $k.PSPath; break }
             }
             catch {}
         }
-
         if ($regPath) {
             Write-Output ""Registry fallback path: $regPath""
-
-            $fallbackKeys = @{
-                'WakeOnMagicPacket' = 1
-                'WakeOnMagicPacketEnabled' = 1
-                'WakeOnPattern' = 0
-                '*WakeOnPattern' = 0
-            }
-
+            $fallbackKeys = @{ 'WakeOnMagicPacket' = 1; 'WakeOnMagicPacketEnabled' = 1; 'WakeOnPattern' = 0; '*WakeOnPattern' = 0 }
             foreach ($key in $fallbackKeys.Keys) {
                 try {
                     Set-ItemProperty -Path $regPath -Name $key -Value $fallbackKeys[$key] -Force -ErrorAction SilentlyContinue
                     Write-Output ""Fallback registry set: $key = $($fallbackKeys[$key])""
                     $summary.RegistryFallbackUsed = $true
                 }
-                catch {
-                    Write-Output ""Fallback registry write failed for: $key""
-                }
+                catch { Write-Output ""Fallback registry write failed for: $key"" }
             }
         }
-        else {
-            Write-Output 'No registry path found for fallback.'
-        }
+        else { Write-Output 'No registry path found for fallback.' }
     }
-    catch {
-        Write-Output ""Registry fallback failed: $($_.Exception.Message)""
-    }
+    catch { Write-Output ""Registry fallback failed: $($_.Exception.Message)"" }
 }
 
 Write-Output '--- Restarting adapter ---'
@@ -776,9 +644,7 @@ try {
     Start-Sleep -Seconds 2
     Write-Output 'Adapter restarted.'
 }
-catch {
-    Write-Output ""Adapter restart failed: $($_.Exception.Message)""
-}
+catch { Write-Output ""Adapter restart failed: $($_.Exception.Message)"" }
 
 $summary.WakeProgrammableAfter = [bool](Test-PowerCfgContainsExact -QueryType 'wake_programmable' -Needle $resolvedPowerCfgName)
 $summary.WakeArmedAfter        = [bool](Test-PowerCfgContainsExact -QueryType 'wake_armed' -Needle $resolvedPowerCfgName)
@@ -787,15 +653,28 @@ Write-Output ""Wake programmable after: $($summary.WakeProgrammableAfter)""
 Write-Output ""Wake armed after:        $($summary.WakeArmedAfter)""
 
 Write-Output '--- SUMMARY ---'
-$summary.GetEnumerator() | ForEach-Object {
-    Write-Output (""{0}: {1}"" -f $_.Key, $_.Value)
-}
+$summary.GetEnumerator() | ForEach-Object { Write-Output (""{0}: {1}"" -f $_.Key, $_.Value) }
 
 Write-Output '=== WOL CONFIGURATION END ==='
 ";
 
                 string output = RunPowerShellWithOutput(script);
                 File.AppendAllText(LogPath, $"[{DateTime.Now}] ENABLE WOL\n{output}\n\n");
+
+                // ----------------------------------------------------------------
+                //  Fire forwarding events ONLY on Optimise click.
+                //  Read IP and MAC from the currently displayed adapter info —
+                //  this reflects either the applied static IP or the existing
+                //  adapter address if the user skipped Apply.
+                // ----------------------------------------------------------------
+                string currentIp  = IpAddressText.Text.Replace("IPv4: ", "").Trim();
+                string currentMac = MacAddressText.Text.Replace("MAC: ", "").Trim();
+
+                if (!string.IsNullOrWhiteSpace(currentIp) && currentIp != "—")
+                    ProvisionedIpChanged?.Invoke(currentIp);
+
+                if (!string.IsNullOrWhiteSpace(currentMac) && currentMac != "—")
+                    ProvisionedMacChanged?.Invoke(currentMac);
 
                 SetStatusSuccess("Wake-on-LAN configured successfully.");
             }
@@ -827,22 +706,13 @@ Write-Output '=== WOL CONFIGURATION END ==='
                 };
 
                 using var proc = Process.Start(psi);
-                if (proc == null)
-                    return "Failed to start PowerShell.";
+                if (proc == null) return "Failed to start PowerShell.";
 
                 string output = proc.StandardOutput.ReadToEnd();
                 string error = proc.StandardError.ReadToEnd();
-
                 proc.WaitForExit();
 
-                try
-                {
-                    if (File.Exists(TempScriptPath))
-                        File.Delete(TempScriptPath);
-                }
-                catch
-                {
-                }
+                try { if (File.Exists(TempScriptPath)) File.Delete(TempScriptPath); } catch { }
 
                 return output + Environment.NewLine + error;
             }
@@ -863,8 +733,7 @@ Write-Output '=== WOL CONFIGURATION END ==='
             };
 
             using var proc = Process.Start(psi);
-            if (proc == null)
-                return string.Empty;
+            if (proc == null) return string.Empty;
 
             string output = proc.StandardOutput.ReadToEnd();
             proc.WaitForExit();

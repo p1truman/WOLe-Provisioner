@@ -81,7 +81,7 @@
                         VerticalAlignment="Top"
                         VerticalContentAlignment="Top"
                         Click="CopyAdapterDetails_Click"
-                        ToolTipService.ToolTip="Click to copy IPv4, MAC and gateway details">
+                        ToolTipService.ToolTip="Click to copy credentials to clipboard">
 
                     <StackPanel Spacing="2">
                         <TextBlock Text="Adapter Details"

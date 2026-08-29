@@ -3,88 +3,76 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <Grid Padding="32">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Padding="32">
+            <StackPanel Spacing="16"
+                        MaxWidth="640"
+                        HorizontalAlignment="Center">
 
-        <StackPanel Spacing="16"
-                    MaxWidth="640"
-                    HorizontalAlignment="Center">
+                <TextBlock Text="Flash Firmware"
+                           Style="{StaticResource PageTitleStyle}"
+                           Margin="0,32,0,0" />
 
-            <!-- PAGE TITLE -->
-            <TextBlock Text="Flash Firmware"
-                       Style="{StaticResource PageTitleStyle}"
-                       Margin="0,32,0,0" />
+                <TextBlock Text="Connect your WOL-e, select the correct COM port and flash the generated firmware to your device."
+                           Style="{StaticResource PageIntroStyle}"
+                           TextAlignment="Center"
+                           MaxWidth="640"
+                           Margin="0,0,0,12" />
 
-            <!-- DESCRIPTION -->
-            <TextBlock Text="Connect your WOL-e, select the correct COM port and flash the generated firmware to your device."
-                       Style="{StaticResource PageIntroStyle}"
-                       TextAlignment="Center"
-                       MaxWidth="640"
-                       Margin="0,0,0,12" />
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Spacing="12">
+                    <ComboBox x:Name="PortCombo"
+                              Width="220"
+                              Height="40"
+                              PlaceholderText="Detecting COM ports..." />
+                    <Button x:Name="RefreshButton"
+                            Content="Refresh"
+                            Width="120"
+                            Height="40"
+                            Click="RefreshButton_Click" />
+                </StackPanel>
 
-            <!-- PORT SELECTION -->
-            <StackPanel Orientation="Horizontal"
+                <Border BorderBrush="{ThemeResource ConfigDividerBrush}"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="8"
+                        Height="260"
+                        Margin="0,8,0,0">
+                    <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+                        <TextBox x:Name="LogTextBox"
+                                 IsReadOnly="True"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 FontFamily="Consolas"
+                                 BorderThickness="0" />
+                    </ScrollViewer>
+                </Border>
+
+                <ProgressBar x:Name="Progress"
+                             Visibility="Collapsed"
+                             Height="6"
+                             Margin="0,4,0,0"
+                             Minimum="0"
+                             Maximum="100"
+                             Foreground="{ThemeResource ConfigAccentBrush}" />
+
+                <Button x:Name="FlashButton"
+                        Content="Flash Firmware"
+                        Width="200"
+                        Height="44"
                         HorizontalAlignment="Center"
-                        Spacing="12">
+                        Margin="0,12,0,0"
+                        Click="FlashButton_Click" />
 
-                <ComboBox x:Name="PortCombo"
-                          Width="220"
-                          Height="40"
-                          PlaceholderText="Detecting COM ports..." />
+                <TextBlock x:Name="ErrorText"
+                           Style="{StaticResource ConfigBodyTextStyle}"
+                           Foreground="{ThemeResource ConfigErrorBrush}"
+                           Visibility="Collapsed"
+                           TextAlignment="Center"
+                           Margin="0,8,0,0" />
 
-                <Button x:Name="RefreshButton"
-                        Content="Refresh"
-                        Width="120"
-                        Height="40"
-                        Click="RefreshButton_Click" />
             </StackPanel>
-
-            <!-- LOG OUTPUT -->
-            <Border BorderBrush="{ThemeResource ConfigDividerBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8"
-                    Height="260"
-                    Margin="0,8,0,0">
-
-                <ScrollViewer x:Name="LogScroll"
-                              VerticalScrollBarVisibility="Auto">
-
-                    <TextBox x:Name="LogTextBox"
-                             IsReadOnly="True"
-                             TextWrapping="Wrap"
-                             AcceptsReturn="True"
-                             FontFamily="Consolas"
-                             BorderThickness="0" />
-                </ScrollViewer>
-            </Border>
-
-            <!-- PROGRESS BAR -->
-            <ProgressBar x:Name="Progress"
-                         Visibility="Collapsed"
-                         Height="6"
-                         Margin="0,4,0,0"
-                         Minimum="0"
-                         Maximum="100"
-                         Foreground="{ThemeResource ConfigAccentBrush}" />
-
-            <!-- FLASH BUTTON -->
-            <Button x:Name="FlashButton"
-                    Content="Flash Firmware"
-                    Width="200"
-                    Height="44"
-                    HorizontalAlignment="Center"
-                    Margin="0,12,0,0"
-                    Click="FlashButton_Click" />
-
-            <!-- ERROR TEXT (NOW BELOW BUTTON) -->
-            <TextBlock x:Name="ErrorText"
-                       Style="{StaticResource ConfigBodyTextStyle}"
-                       Foreground="{ThemeResource ConfigErrorBrush}"
-                       Visibility="Collapsed"
-                       TextAlignment="Center"
-                       Margin="0,8,0,0" />
-
-        </StackPanel>
-
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </Page>

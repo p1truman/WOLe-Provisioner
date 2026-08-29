@@ -3,79 +3,71 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <Grid Padding="32">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Padding="32">
+            <StackPanel Spacing="28"
+                        MaxWidth="780"
+                        HorizontalAlignment="Center">
 
-        <StackPanel Spacing="28"
-                    MaxWidth="720"
-                    MinWidth="600"
-                    HorizontalAlignment="Center">
+                <TextBlock x:Name="HeaderText"
+                           Style="{StaticResource PageTitleStyle}"
+                           MaxWidth="720"
+                           Margin="0,48,0,0" />
 
-            <!-- DYNAMIC PAGE TITLE -->
-            <TextBlock x:Name="HeaderText"
-                       Style="{StaticResource PageTitleStyle}"
-                       Margin="0,48,0,0" />
+                <TextBlock x:Name="DescriptionText"
+                           Style="{StaticResource PageIntroStyle}"
+                           TextAlignment="Center"
+                           MaxWidth="720" />
 
-            <!-- DYNAMIC DESCRIPTION -->
-            <TextBlock x:Name="DescriptionText"
-                       Style="{StaticResource PageIntroStyle}"
-                       TextAlignment="Center"
-                       MaxWidth="720" />
+                <Border BorderBrush="{ThemeResource ConfigDividerBrush}"
+        BorderThickness="1"
+        CornerRadius="4"
+        Padding="8"
+        Height="300"
+        Width="620"
+        HorizontalAlignment="Center">
+                    <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+                        <TextBox x:Name="LogBlock"
+                                 IsReadOnly="True"
+                                 TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 FontFamily="Consolas" />
+                    </ScrollViewer>
+                </Border>
 
-            <!-- LOG OUTPUT -->
-            <Border BorderBrush="{ThemeResource ConfigDividerBrush}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8"
-                    Height="300">
+                <ProgressBar x:Name="Progress"
+                             Height="6"
+                             Minimum="0"
+                             Maximum="100"
+                             Visibility="Collapsed"
+                             Foreground="{ThemeResource ConfigAccentBrush}" />
 
-                <ScrollViewer x:Name="LogScroll"
-                              VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="ButtonRow"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Spacing="12"
+                            Margin="0,20,0,0">
+                    <Button x:Name="InstallButton"
+                            Content="Install Enhanced Actions"
+                            Width="260"
+                            Height="44"
+                            Click="Install_Click" />
+                    <Button x:Name="SkipButton"
+                            Content="Skip"
+                            Width="160"
+                            Height="44"
+                            Click="Skip_Click" />
+                </StackPanel>
 
-                    <TextBox x:Name="LogBlock"
-                             IsReadOnly="True"
-                             TextWrapping="Wrap"
-                             AcceptsReturn="True"
-                             FontFamily="Consolas" />
-                </ScrollViewer>
-            </Border>
+                <TextBlock x:Name="ErrorText"
+                           Style="{StaticResource ConfigBodyTextStyle}"
+                           Foreground="{ThemeResource ConfigErrorBrush}"
+                           Visibility="Collapsed"
+                           TextAlignment="Center"
+                           MaxWidth="720"
+                           Margin="0,12,0,0" />
 
-            <!-- PROGRESS BAR -->
-            <ProgressBar x:Name="Progress"
-                         Height="6"
-                         Minimum="0"
-                         Maximum="100"
-                         Visibility="Collapsed"
-                         Foreground="{ThemeResource ConfigAccentBrush}" />
-
-            <!-- BUTTON ROW -->
-            <StackPanel x:Name="ButtonRow"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Center"
-                        Spacing="12"
-                        Margin="0,20,0,0">
-
-                <Button x:Name="InstallButton"
-                        Content="Install Enhanced Actions"
-                        Width="260"
-                        Height="44"
-                        Click="Install_Click" />
-
-                <Button x:Name="SkipButton"
-                        Content="Skip"
-                        Width="160"
-                        Height="44"
-                        Click="Skip_Click" />
             </StackPanel>
-
-            <!-- ERROR TEXT -->
-            <TextBlock x:Name="ErrorText"
-                       Style="{StaticResource ConfigBodyTextStyle}"
-                       Foreground="{ThemeResource ConfigErrorBrush}"
-                       Visibility="Collapsed"
-                       TextAlignment="Center"
-                       Margin="0,12,0,0" />
-
-        </StackPanel>
-
-    </Grid>
+        </Grid>
+    </ScrollViewer>
 </Page>
