@@ -7,7 +7,6 @@
 
     <Page.Resources>
         <ResourceDictionary>
-            <!-- Only keep your converter -->
             <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
         </ResourceDictionary>
     </Page.Resources>
@@ -38,6 +37,16 @@
                     <ComboBoxItem Content="5" />
                 </ComboBox>
 
+                <!-- SHARED PC DATA TEMPLATE -->
+                <!--
+                     The enhanced-device area is a plain StackPanel named
+                     "EnhancedDevicePanel".  When it loads, EnhancedPanel_Loaded
+                     fires in code-behind, registers the panel against its PcRow,
+                     and calls RebuildEnhancedPanel to draw the boxes with the
+                     correct count-aware layout.  CollectionChanged on the row's
+                     EnhancedDevices keeps it up to date on every Add / Delete.
+                -->
+
                 <!-- SINGLE PC LAYOUT -->
                 <StackPanel x:Name="NonScrollContainer"
                             Visibility="Collapsed"
@@ -62,7 +71,7 @@
                                              Text="{Binding PowerDeviceId, Mode=TwoWay}" />
 
                                     <!-- ENHANCED DEVICES HEADER + BUTTONS -->
-                                    <Grid ColumnSpacing="8" Margin="0,2,0,-14">
+                                    <Grid ColumnSpacing="8" Margin="0,2,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -72,7 +81,6 @@
                                         <TextBlock Text="Enhanced Devices (Optional)"
                                                    Style="{StaticResource ConfigSectionHeaderStyle}" />
 
-                                        <!-- DELETE -->
                                         <Button Content="Delete"
                                                 Grid.Column="1"
                                                 Width="80"
@@ -81,7 +89,6 @@
                                                 Click="RemoveEnhancedDevice_Click"
                                                 Visibility="{Binding EnhancedDevices.Count, Converter={StaticResource CountToVisibilityConverter}}" />
 
-                                        <!-- ADD -->
                                         <Button Content="Add"
                                                 Grid.Column="2"
                                                 Width="80"
@@ -90,22 +97,8 @@
                                                 Click="AddEnhancedDevice_Click" />
                                     </Grid>
 
-                                    <!-- ENHANCED DEVICES LIST -->
-                                    <ItemsControl ItemsSource="{Binding EnhancedDevices}"
-                                                  Margin="0,0,0,-12">
-                                        <ItemsControl.ItemContainerStyle>
-                                            <Style TargetType="ContentPresenter">
-                                                <Setter Property="Margin" Value="0,0,0,12" />
-                                            </Style>
-                                        </ItemsControl.ItemContainerStyle>
-
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBox Header="{Binding Header}"
-                                                         Text="{Binding DeviceId, Mode=TwoWay}" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                    <!-- ENHANCED DEVICE BOXES — built by code-behind -->
+                                    <StackPanel Loaded="EnhancedPanel_Loaded" />
 
                                     <!-- MAC -->
                                     <TextBox Header="MAC Address"
@@ -160,7 +153,7 @@
                                              Text="{Binding PowerDeviceId, Mode=TwoWay}" />
 
                                     <!-- ENHANCED DEVICES HEADER + BUTTONS -->
-                                    <Grid ColumnSpacing="8" Margin="0,2,0,-14">
+                                    <Grid ColumnSpacing="8" Margin="0,2,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -170,7 +163,6 @@
                                         <TextBlock Text="Enhanced Devices (Optional)"
                                                    Style="{StaticResource ConfigSectionHeaderStyle}" />
 
-                                        <!-- DELETE -->
                                         <Button Content="Delete"
                                                 Grid.Column="1"
                                                 Width="80"
@@ -179,7 +171,6 @@
                                                 Click="RemoveEnhancedDevice_Click"
                                                 Visibility="{Binding EnhancedDevices.Count, Converter={StaticResource CountToVisibilityConverter}}" />
 
-                                        <!-- ADD -->
                                         <Button Content="Add"
                                                 Grid.Column="2"
                                                 Width="80"
@@ -188,22 +179,8 @@
                                                 Click="AddEnhancedDevice_Click" />
                                     </Grid>
 
-                                    <!-- ENHANCED DEVICES LIST -->
-                                    <ItemsControl ItemsSource="{Binding EnhancedDevices}"
-                                                  Margin="0,0,0,-12">
-                                        <ItemsControl.ItemContainerStyle>
-                                            <Style TargetType="ContentPresenter">
-                                                <Setter Property="Margin" Value="0,0,0,12" />
-                                            </Style>
-                                        </ItemsControl.ItemContainerStyle>
-
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBox Header="{Binding Header}"
-                                                         Text="{Binding DeviceId, Mode=TwoWay}" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                                    <!-- ENHANCED DEVICE BOXES — built by code-behind -->
+                                    <StackPanel Loaded="EnhancedPanel_Loaded" />
 
                                     <!-- MAC -->
                                     <TextBox Header="MAC Address"

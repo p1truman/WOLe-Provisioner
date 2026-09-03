@@ -11,3 +11,6 @@ cd "D:\Users\RTS\Desktop\New folder (4)\WOLe Provisioner\WOLe\ActionsServer\bin\
 
 .\ActionsServer.exe
 
+
+
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishAot=true -p:PublishSingleFile=false

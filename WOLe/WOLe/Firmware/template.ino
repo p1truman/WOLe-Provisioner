@@ -11,11 +11,11 @@
 /************************************************************
  *  PLACEHOLDERS (Provisioning tool fills these)
  ************************************************************/
-const char* WIFI_SSID     = "{{WIFI_SSID}}";
-const char* WIFI_PASSWORD = "{{WIFI_PASSWORD}}";
+const char* WIFI_SSID       = "{{WIFI_SSID}}";
+const char* WIFI_PASSWORD   = "{{WIFI_PASSWORD}}";
 
-const char* APP_KEY       = "{{APP_KEY}}";
-const char* APP_SECRET    = "{{APP_SECRET}}";
+const char* APP_KEY         = "{{APP_KEY}}";
+const char* APP_SECRET      = "{{APP_SECRET}}";
 
 const char* SHUTDOWN_SECRET = "{{SHUTDOWN_SECRET}}";
 
@@ -62,7 +62,7 @@ int enhancedDevicePcIndexes[MAX_ENHANCED_DEVICE_COUNT] = {
   {{ENHANCED_DEVICE_PC_INDEXES}}
 };
 
-String enhancedActionOn[MAX_ENHANCED_DEVICE_COUNT]  = {
+String enhancedActionOn[MAX_ENHANCED_DEVICE_COUNT] = {
   {{ENHANCED_ACTION_ON}}
 };
 
@@ -96,15 +96,15 @@ enum LedState {
 LedState baseState    = LED_BREATH_BLUE;
 LedState currentState = LED_BREATH_BLUE;
 
-unsigned long lastLedUpdate    = 0;
+unsigned long lastLedUpdate     = 0;
 const unsigned long ledInterval = 20;
 
-float breathPhase = 0.0f;
+float breathPhase      = 0.0f;
 const float breathStep = 0.05f;
 
-unsigned long flashEndTime     = 0;
-unsigned long flashStartTime   = 0;
-unsigned long flashDuration    = 300;
+unsigned long flashEndTime   = 0;
+unsigned long flashStartTime = 0;
+unsigned long flashDuration  = 300;
 const unsigned long launchAppRainbowDuration = 2000;
 
 bool isFlashState(LedState state) {
@@ -131,43 +131,42 @@ void setBaseState(LedState state) {
 }
 
 void triggerFlash(LedState flashState) {
-  currentState = flashState;
+  currentState   = flashState;
   flashStartTime = millis();
-  flashDuration = (flashState == LED_FLASH_RAINBOW) ? launchAppRainbowDuration : 300;
-  flashEndTime = flashStartTime + flashDuration;
+  flashDuration  = (flashState == LED_FLASH_RAINBOW) ? launchAppRainbowDuration : 300;
+  flashEndTime   = flashStartTime + flashDuration;
 }
 
 void updateLed() {
   unsigned long now = millis();
 
-  if (isFlashState(currentState) && now >= flashEndTime) {
+  if (isFlashState(currentState) && now >= flashEndTime)
     currentState = baseState;
-  }
 
   if (now - lastLedUpdate < ledInterval) return;
   lastLedUpdate = now;
 
   switch (currentState) {
-    case LED_OFF:         setLED(0,0,0); break;
-    case LED_SOLID_BLUE:  setLED(0,0,255); break;
+    case LED_OFF:         setLED(0,0,0);       break;
+    case LED_SOLID_BLUE:  setLED(0,0,255);     break;
 
     case LED_BREATH_BLUE: {
       breathPhase += breathStep;
       if (breathPhase > 2.0f * PI) breathPhase -= 2.0f * PI;
       float normalized = (sin(breathPhase) + 1.0f) * 0.5f;
-      uint8_t brightness = (uint8_t)(normalized * 255.0f);
-      setLED(0,0,brightness);
+      setLED(0, 0, (uint8_t)(normalized * 255.0f));
       break;
     }
 
-    case LED_FLASH_GREEN:  setLED(0,255,0); break;
-    case LED_FLASH_RED:    setLED(255,0,0); break;
-    case LED_FLASH_YELLOW: setLED(255,255,50); break;
-    case LED_FLASH_WHITE:  setLED(255,255,255); break;
-    case LED_FLASH_PINK:   setLED(255,0,128); break;
-    case LED_FLASH_ORANGE: setLED(255,100,0); break;
-    case LED_FLASH_PURPLE: setLED(200,0,255); break;
-    case LED_FLASH_CYAN:   setLED(0,255,200); break;
+    case LED_FLASH_GREEN:   setLED(0,255,0);     break;
+    case LED_FLASH_RED:     setLED(255,0,0);     break;
+    case LED_FLASH_YELLOW:  setLED(255,255,50);  break;
+    case LED_FLASH_WHITE:   setLED(255,255,255); break;
+    case LED_FLASH_PINK:    setLED(255,0,128);   break;
+    case LED_FLASH_ORANGE:  setLED(255,100,0);   break;
+    case LED_FLASH_PURPLE:  setLED(200,0,255);   break;
+    case LED_FLASH_CYAN:    setLED(0,255,200);   break;
+
     case LED_FLASH_RAINBOW: {
       float progress = (float)(now - flashStartTime) / (float)launchAppRainbowDuration;
       if (progress < 0.0f) progress = 0.0f;
@@ -239,25 +238,54 @@ void sendActionRequest(String baseUrl, String action, LedState flashColor) {
 }
 
 /************************************************************
+ *  LED COLOUR MAP FOR ACTIONS
+ *
+ *  Colour guide:
+ *    GREEN   = wake
+ *    RED     = shutdown
+ *    YELLOW  = restart
+ *    PINK    = sleep
+ *    WHITE   = hibernate
+ *    ORANGE  = lock
+ *    PURPLE  = screen off
+ *    CYAN    = mute / unmute / volume
+ *    RAINBOW = any launch app (1–8)
+ ************************************************************/
+LedState getFlashColorForAction(String action) {
+  if (action == "restart")     return LED_FLASH_YELLOW;
+  if (action == "sleep")       return LED_FLASH_PINK;
+  if (action == "hibernate")   return LED_FLASH_WHITE;
+  if (action == "lock")        return LED_FLASH_ORANGE;
+  if (action == "screenoff")   return LED_FLASH_PURPLE;
+  if (action == "mute")        return LED_FLASH_CYAN;
+  if (action == "unmute")      return LED_FLASH_CYAN;
+  if (action == "volumeup")    return LED_FLASH_CYAN;
+  if (action == "volumedown")  return LED_FLASH_CYAN;
+  if (action == "launchapp1")  return LED_FLASH_RAINBOW;
+  if (action == "launchapp2")  return LED_FLASH_RAINBOW;
+  if (action == "launchapp3")  return LED_FLASH_RAINBOW;
+  if (action == "launchapp4")  return LED_FLASH_RAINBOW;
+  if (action == "launchapp5")  return LED_FLASH_RAINBOW;
+  if (action == "launchapp6")  return LED_FLASH_RAINBOW;
+  if (action == "launchapp7")  return LED_FLASH_RAINBOW;
+  if (action == "launchapp8")  return LED_FLASH_RAINBOW;
+  return LED_FLASH_WHITE;
+}
+
+/************************************************************
  *  POWER SWITCH SEQUENCE DETECTION (Switch A)
  ************************************************************/
 String powerSeq = "";
 unsigned long powerLastEventTime = 0;
 const unsigned long powerSeqTimeout = 1000;
-
-// ⭐ NEW: Track which PC triggered the power event
 int currentPowerPcIndex = -1;
 
 void addPowerEvent(bool state) {
   unsigned long now = millis();
-
-  if (now - powerLastEventTime > powerSeqTimeout) {
+  if (now - powerLastEventTime > powerSeqTimeout)
     powerSeq = "";
-  }
-
   powerLastEventTime = now;
   powerSeq += (state ? "1" : "0");
-
   Serial.println("POWER SEQ = " + powerSeq);
 }
 
@@ -269,10 +297,8 @@ void evaluatePowerSequence() {
 
   String s = powerSeq;
   powerSeq = "";
-
   Serial.println("FINAL POWER SEQ = " + s);
 
-  // ⭐ NEW: Use the correct PC index
   if (currentPowerPcIndex < 0 || currentPowerPcIndex >= PC_COUNT) {
     Serial.println("Invalid PC index for power event.");
     return;
@@ -280,48 +306,22 @@ void evaluatePowerSequence() {
 
   int i = currentPowerPcIndex;
 
-  if (s == "1") {
-    sendWOL(pcMacs[i].c_str());
-    triggerFlash(LED_FLASH_GREEN);
-    return;
-  }
-
-  if (s == "0") {
-    sendActionRequest(pcShutdownURLs[i], "shutdown", LED_FLASH_RED);
-    return;
-  }
-
-  if (s == "01") {
-    sendActionRequest(pcShutdownURLs[i], "restart", LED_FLASH_YELLOW);
-    return;
-  }
+  if (s == "1") { sendWOL(pcMacs[i].c_str()); triggerFlash(LED_FLASH_GREEN); return; }
+  if (s == "0") { sendActionRequest(pcShutdownURLs[i], "shutdown", LED_FLASH_RED); return; }
+  if (s == "01") { sendActionRequest(pcShutdownURLs[i], "restart", LED_FLASH_YELLOW); return; }
 }
 
 /************************************************************
- *  ACTION SWITCH HANDLER (Switch B)
+ *  ACTION SWITCH HANDLER (Enhanced Devices)
  ************************************************************/
-LedState getFlashColorForAction(String action) {
-  if (action == "restart")    return LED_FLASH_YELLOW;
-  if (action == "sleep")      return LED_FLASH_PINK;
-  if (action == "hibernate")  return LED_FLASH_WHITE;
-  if (action == "lock")       return LED_FLASH_ORANGE;
-  if (action == "screenoff")  return LED_FLASH_PURPLE;
-  if (action == "launchapp1") return LED_FLASH_RAINBOW;
-  if (action == "launchapp2") return LED_FLASH_RAINBOW;
-  if (action == "launchapp3") return LED_FLASH_RAINBOW;
-  if (action == "launchapp4") return LED_FLASH_RAINBOW;
-
-  return LED_FLASH_WHITE;
-}
-
 void handleActionSwitch(const String &deviceId, bool state) {
   for (int i = 0; i < ENHANCED_DEVICE_COUNT; i++) {
     if (deviceId == enhancedDeviceIDs[i]) {
       int pcIndex = enhancedDevicePcIndexes[i];
       if (pcIndex < 0 || pcIndex >= PC_COUNT) continue;
 
-      String action = state ? enhancedActionOn[i] : enhancedActionOff[i];
-      LedState color = getFlashColorForAction(action);
+      String   action = state ? enhancedActionOn[i] : enhancedActionOff[i];
+      LedState color  = getFlashColorForAction(action);
 
       Serial.println("Action switch [PC" + String(pcIndex + 1) + "] -> " + action);
       sendActionRequest(pcShutdownURLs[pcIndex], action, color);
@@ -334,8 +334,6 @@ void handleActionSwitch(const String &deviceId, bool state) {
  *  SINRIC CALLBACKS
  ************************************************************/
 bool onPowerState(const String &deviceId, bool state) {
-
-  // ⭐ NEW: Identify which PC this power switch belongs to
   for (int i = 0; i < PC_COUNT; i++) {
     if (deviceId == pcPowerDeviceIDs[i]) {
       currentPowerPcIndex = i;
@@ -343,7 +341,6 @@ bool onPowerState(const String &deviceId, bool state) {
       return true;
     }
   }
-
   handleActionSwitch(deviceId, state);
   return true;
 }
@@ -354,15 +351,15 @@ bool onPowerState(const String &deviceId, bool state) {
 void setupSinric() {
   for (int i = 0; i < PC_COUNT; i++) {
     if (pcPowerDeviceIDs[i].length() > 5) {
-      SinricProSwitch& swPower = SinricPro[pcPowerDeviceIDs[i]];
-      swPower.onPowerState(onPowerState);
+      SinricProSwitch& sw = SinricPro[pcPowerDeviceIDs[i]];
+      sw.onPowerState(onPowerState);
     }
   }
 
   for (int i = 0; i < ENHANCED_DEVICE_COUNT; i++) {
     if (enhancedDeviceIDs[i].length() > 5) {
-      SinricProSwitch& swAction = SinricPro[enhancedDeviceIDs[i]];
-      swAction.onPowerState(onPowerState);
+      SinricProSwitch& sw = SinricPro[enhancedDeviceIDs[i]];
+      sw.onPowerState(onPowerState);
     }
   }
 
