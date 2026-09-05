@@ -12,7 +12,7 @@
     <!-- Trimming -->
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>full</TrimMode>
-    <IlcDisableReflection>true</IlcDisableReflection>
+    <IlcDisableReflection>false</IlcDisableReflection>
 
     <!-- Optimize for size -->
     <OptimizationPreference>Size</OptimizationPreference>

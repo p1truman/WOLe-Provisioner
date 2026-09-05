@@ -9,24 +9,33 @@ namespace WOLe.ActionsServer
 {
     public sealed class ServerConfig
     {
-        public int    Port        { get; set; }
-        public string Secret      { get; set; } = "";
-        public int    VolumeStep  { get; set; } = 15;
-        public string LaunchApp1  { get; set; } = "";
-        public string LaunchApp2  { get; set; } = "";
-        public string LaunchApp3  { get; set; } = "";
-        public string LaunchApp4  { get; set; } = "";
-        public string LaunchApp5  { get; set; } = "";
-        public string LaunchApp6  { get; set; } = "";
-        public string LaunchApp7  { get; set; } = "";
-        public string LaunchApp8  { get; set; } = "";
+        public int Port { get; set; }
+        public string Secret { get; set; } = "";
+
+        // New independent volume steps
+        public int VolumeUpStep { get; set; } = 6;    // percent
+        public int VolumeDownStep { get; set; } = 6;  // percent
+
+        // Backward compatibility fallback
+        public int VolumeStep { get; set; } = 6;
+
+        public string LaunchApp1 { get; set; } = "";
+        public string LaunchApp2 { get; set; } = "";
+        public string LaunchApp3 { get; set; } = "";
+        public string LaunchApp4 { get; set; } = "";
+        public string LaunchApp5 { get; set; } = "";
+        public string LaunchApp6 { get; set; } = "";
+        public string LaunchApp7 { get; set; } = "";
+        public string LaunchApp8 { get; set; } = "";
     }
 
     public static class Program
     {
-        private static ServerConfig _config     = new();
-        private static string       _configPath = "";
-        private static string       _logPath    = "";
+        private static ServerConfig _config = new();
+        private static string _configPath = "";
+        private static string _logPath = "";
+        private static string _basePath = "";
+        private static string _nircmdPath = "";
 
         public static int Main(string[] args)
         {
@@ -34,7 +43,12 @@ namespace WOLe.ActionsServer
             {
                 InitializePaths();
                 LoadConfig();
-                Log($"WOL-e Actions Server starting on port {_config.Port}. Volume step: {_config.VolumeStep}%");
+
+                Log($"WOL-e Actions Server starting on port {_config.Port}. VolumeUp: {_config.VolumeUpStep}%, VolumeDown: {_config.VolumeDownStep}%");
+                Log("Audio mode: NirCmd");
+                Log(File.Exists(_nircmdPath)
+                    ? $"nircmd found: {_nircmdPath}"
+                    : $"WARN: nircmd missing: {_nircmdPath}");
 
                 using var listener = new HttpListener();
                 listener.Prefixes.Add($"http://+:{_config.Port}/");
@@ -60,11 +74,12 @@ namespace WOLe.ActionsServer
             var appData = Environment.GetEnvironmentVariable("APPDATA")
                 ?? throw new InvalidOperationException("APPDATA environment variable is not set.");
 
-            var basePath = Path.Combine(appData, "WOL-e", "actions-service");
-            Directory.CreateDirectory(basePath);
+            _basePath = Path.Combine(appData, "WOL-e", "actions-service");
+            Directory.CreateDirectory(_basePath);
 
-            _configPath = Path.Combine(basePath, "config.json");
-            _logPath    = Path.Combine(basePath, "actions_log.txt");
+            _configPath = Path.Combine(_basePath, "config.json");
+            _logPath = Path.Combine(_basePath, "actions_log.txt");
+            _nircmdPath = Path.Combine(_basePath, "nircmd.exe");
         }
 
         private static void LoadConfig()
@@ -73,15 +88,22 @@ namespace WOLe.ActionsServer
                 throw new FileNotFoundException("config.json not found", _configPath);
 
             var json = File.ReadAllText(_configPath, Encoding.UTF8);
-            var cfg  = new ServerConfig();
+            var cfg = new ServerConfig();
 
             using (var doc = JsonDocument.Parse(json))
             {
                 var root = doc.RootElement;
 
-                cfg.Port       = GetInt   (root, "Port",       "port",       5050);
-                cfg.VolumeStep = GetInt   (root, "VolumeStep", "volumeStep", 15);
-                cfg.Secret     = GetString(root, "Secret",     "secret");
+                cfg.Port = GetInt(root, "Port", "port", 5050);
+                cfg.Secret = GetString(root, "Secret", "secret");
+
+                // Backward compatibility legacy key
+                cfg.VolumeStep = GetInt(root, "VolumeStep", "volumeStep", 6);
+
+                // New independent keys; fallback to legacy if absent
+                cfg.VolumeUpStep = GetInt(root, "VolumeUpStep", "volumeUpStep", cfg.VolumeStep);
+                cfg.VolumeDownStep = GetInt(root, "VolumeDownStep", "volumeDownStep", cfg.VolumeStep);
+
                 cfg.LaunchApp1 = GetString(root, "LaunchApp1", "launchApp1");
                 cfg.LaunchApp2 = GetString(root, "LaunchApp2", "launchApp2");
                 cfg.LaunchApp3 = GetString(root, "LaunchApp3", "launchApp3");
@@ -95,10 +117,17 @@ namespace WOLe.ActionsServer
             if (string.IsNullOrWhiteSpace(cfg.Secret))
                 throw new InvalidOperationException("Secret is missing in config.json.");
 
-            if (cfg.VolumeStep < 1)  cfg.VolumeStep = 1;
-            if (cfg.VolumeStep > 50) cfg.VolumeStep = 50;
+            cfg.VolumeUpStep = ClampStep(cfg.VolumeUpStep);
+            cfg.VolumeDownStep = ClampStep(cfg.VolumeDownStep);
 
             _config = cfg;
+        }
+
+        private static int ClampStep(int value)
+        {
+            if (value < 1) return 1;
+            if (value > 50) return 50;
+            return value;
         }
 
         private static string GetString(JsonElement root, params string[] keys)
@@ -107,7 +136,9 @@ namespace WOLe.ActionsServer
             {
                 if (root.TryGetProperty(key, out var prop) &&
                     prop.ValueKind == JsonValueKind.String)
+                {
                     return prop.GetString() ?? "";
+                }
             }
             return "";
         }
@@ -123,44 +154,43 @@ namespace WOLe.ActionsServer
         {
             try
             {
-                var request  = context.Request;
+                var request = context.Request;
                 var response = context.Response;
 
-                var path  = request.Url?.AbsolutePath ?? "/";
+                var path = request.Url?.AbsolutePath ?? "/";
                 var query = request.Url?.Query ?? "";
-                var key   = GetQueryParam(query, "key");
+                var key = GetQueryParam(query, "key");
 
-                // ── Legacy ESP32 / Python server compatibility ─────────────
                 var action = GetQueryParam(query, "action");
                 if (!string.IsNullOrEmpty(action))
                 {
                     Log($"Legacy action detected: {action}");
-                    path = action.ToLowerInvariant() switch
+
+                    switch (action.ToLowerInvariant())
                     {
-                        "shutdown"   => "/shutdown",
-                        "restart"    => "/restart",
-                        "sleep"      => "/sleep",
-                        "hibernate"  => "/hibernate",
-                        "lock"       => "/lock",
-                        "screenoff"  => "/screenoff",
-                        "mute"       => "/mute",
-                        "unmute"     => "/unmute",
-                        "volumeup"   => "/volumeup",
-                        "volumedown" => "/volumedown",
-                        "launchapp1" => "/launchapp1",
-                        "launchapp2" => "/launchapp2",
-                        "launchapp3" => "/launchapp3",
-                        "launchapp4" => "/launchapp4",
-                        "launchapp5" => "/launchapp5",
-                        "launchapp6" => "/launchapp6",
-                        "launchapp7" => "/launchapp7",
-                        "launchapp8" => "/launchapp8",
-                        _            => path
-                    };
+                        case "shutdown": path = "/shutdown"; break;
+                        case "restart": path = "/restart"; break;
+                        case "sleep": path = "/sleep"; break;
+                        case "hibernate": path = "/hibernate"; break;
+                        case "lock": path = "/lock"; break;
+                        case "screenoff": path = "/screenoff"; break;
+                        case "mute": path = "/mute"; break;
+                        case "unmute": path = "/unmute"; break;
+                        case "volumeup": path = "/volumeup"; break;
+                        case "volumedown": path = "/volumedown"; break;
+                        case "launchapp1": path = "/launchapp1"; break;
+                        case "launchapp2": path = "/launchapp2"; break;
+                        case "launchapp3": path = "/launchapp3"; break;
+                        case "launchapp4": path = "/launchapp4"; break;
+                        case "launchapp5": path = "/launchapp5"; break;
+                        case "launchapp6": path = "/launchapp6"; break;
+                        case "launchapp7": path = "/launchapp7"; break;
+                        case "launchapp8": path = "/launchapp8"; break;
+                    }
+
                     key = _config.Secret;
                 }
 
-                // ── Legacy bare paths (no key) ─────────────────────────────
                 if (string.IsNullOrEmpty(key))
                 {
                     switch (path.ToLowerInvariant())
@@ -189,7 +219,6 @@ namespace WOLe.ActionsServer
                     }
                 }
 
-                // ── Secret validation ──────────────────────────────────────
                 if (!string.Equals(key, _config.Secret, StringComparison.Ordinal))
                 {
                     WriteResponse(response, 403, "FORBIDDEN");
@@ -227,34 +256,34 @@ namespace WOLe.ActionsServer
 
                     case "/screenoff":
                         RunCommand("powershell.exe",
-                            "(Add-Type -MemberDefinition '[DllImport(\"user32.dll\")]public static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam);' " +
-                            "-Name Win32 -Namespace Native -PassThru)::SendMessage(-1, 0x0112, 0xF170, 2)");
+                            "(Add-Type -MemberDefinition '[DllImport(\"user32.dll\")]public static extern int SendMessage(int hWnd, int hMsg, int wParam, int lParam);' -Name Win32 -Namespace Native -PassThru)::SendMessage(-1, 0x0112, 0xF170, 2)");
                         WriteResponse(response, 200, "SCREENOFF");
                         return;
 
-                    // ── Mute / Unmute ──────────────────────────────────────
                     case "/mute":
-                        RunCommand("powershell.exe", BuildMuteScript(true));
+                        EnsureNirCmd();
+                        RunCommand(_nircmdPath, "mutesysvolume 1");
                         WriteResponse(response, 200, "MUTE");
                         return;
 
                     case "/unmute":
-                        RunCommand("powershell.exe", BuildMuteScript(false));
+                        EnsureNirCmd();
+                        RunCommand(_nircmdPath, "mutesysvolume 0");
                         WriteResponse(response, 200, "UNMUTE");
                         return;
 
-                    // ── Volume Up / Down ───────────────────────────────────
                     case "/volumeup":
-                        RunCommand("powershell.exe", BuildVolumeScript(+_config.VolumeStep));
+                        EnsureNirCmd();
+                        RunCommand(_nircmdPath, $"changesysvolume {PercentToNirCmdDelta(_config.VolumeUpStep)}");
                         WriteResponse(response, 200, "VOLUME_UP");
                         return;
 
                     case "/volumedown":
-                        RunCommand("powershell.exe", BuildVolumeScript(-_config.VolumeStep));
+                        EnsureNirCmd();
+                        RunCommand(_nircmdPath, $"changesysvolume -{PercentToNirCmdDelta(_config.VolumeDownStep)}");
                         WriteResponse(response, 200, "VOLUME_DOWN");
                         return;
 
-                    // ── Launch Apps ────────────────────────────────────────
                     case "/launchapp1":
                         HandleLaunchApp(response, _config.LaunchApp1, "LAUNCH_APP_1"); return;
                     case "/launchapp2":
@@ -273,14 +302,20 @@ namespace WOLe.ActionsServer
                         HandleLaunchApp(response, _config.LaunchApp8, "LAUNCH_APP_8"); return;
 
                     case "/ping":
-                        WriteResponse(response, 200, "PONG"); return;
+                        WriteResponse(response, 200, "PONG");
+                        return;
+
                     case "/status":
-                        WriteResponse(response, 200, "OK"); return;
+                        WriteResponse(response, 200, "OK");
+                        return;
+
                     case "/version":
-                        WriteResponse(response, 200, "WOL-e Actions Server 1.1"); return;
+                        WriteResponse(response, 200, "WOL-e Actions Server 2.1-nircmd");
+                        return;
 
                     default:
-                        WriteResponse(response, 404, "NOT_FOUND"); return;
+                        WriteResponse(response, 404, "NOT_FOUND");
+                        return;
                 }
             }
             catch (Exception ex)
@@ -290,43 +325,19 @@ namespace WOLe.ActionsServer
             }
         }
 
-        // ── Audio script builders ──────────────────────────────────────────
-
-        private static string AudioTypeDefinition =>
-            "using System.Runtime.InteropServices; " +
-            "[Guid(\\\"5CDF2C82-841E-4546-9722-0CF74078229A\\\"), " +
-            "InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] " +
-            "public interface IAudioEndpointVolume { " +
-            "void r1(); void r2(); void r3(); void r4(); " +
-            "[PreserveSig] int SetMasterVolumeLevelScalar(float f, System.Guid g); " +
-            "[PreserveSig] int GetMasterVolumeLevelScalar(out float f); " +
-            "void r7(); void r8(); " +
-            "[PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool b, System.Guid g); }";
-
-        private static string GetAudioDevice =>
-            "$t = [Type]::GetTypeFromCLSID([Guid]'BCDE0395-E52F-467C-8E3D-C4579291692E'); " +
-            "$dev = [Activator]::CreateInstance($t);";
-
-        private static string BuildMuteScript(bool mute) =>
-            $"-NoProfile -Command \"Add-Type -TypeDefinition '{AudioTypeDefinition}'; " +
-            $"{GetAudioDevice} " +
-            $"$dev.SetMute(${(mute ? "true" : "false")}, [System.Guid]::Empty)\"";
-
-        private static string BuildVolumeScript(int stepPercent)
+        private static int PercentToNirCmdDelta(int percent)
         {
-            double stepScalar = stepPercent / 100.0;
-            string clamp = stepPercent > 0
-                ? $"[Math]::Min(1.0, $v + {stepScalar})"
-                : $"[Math]::Max(0.0, $v + {stepScalar})";
-
-            return $"-NoProfile -Command \"Add-Type -TypeDefinition '{AudioTypeDefinition}'; " +
-                   $"{GetAudioDevice} " +
-                   $"[float]$v = 0; $dev.GetMasterVolumeLevelScalar([ref]$v); " +
-                   $"$new = {clamp}; " +
-                   $"$dev.SetMasterVolumeLevelScalar([float]$new, [System.Guid]::Empty)\"";
+            var delta = (int)Math.Round((percent / 100.0) * 65535.0);
+            if (delta < 1) delta = 1;
+            if (delta > 65535) delta = 65535;
+            return delta;
         }
 
-        // ── Helpers ────────────────────────────────────────────────────────
+        private static void EnsureNirCmd()
+        {
+            if (!File.Exists(_nircmdPath))
+                throw new FileNotFoundException("nircmd.exe not found beside ActionsServer.exe", _nircmdPath);
+        }
 
         private static void HandleLaunchApp(HttpListenerResponse response, string path, string label)
         {
@@ -338,7 +349,11 @@ namespace WOLe.ActionsServer
 
             try
             {
-                Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
                 WriteResponse(response, 200, label);
             }
             catch (Exception ex)
@@ -353,11 +368,11 @@ namespace WOLe.ActionsServer
             if (string.IsNullOrEmpty(query)) return "";
             if (query.StartsWith("?")) query = query.Substring(1);
 
-            foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            var parts = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
             {
                 var kv = part.Split('=', 2);
-                if (kv.Length == 2 &&
-                    string.Equals(kv[0], name, StringComparison.OrdinalIgnoreCase))
+                if (kv.Length == 2 && string.Equals(kv[0], name, StringComparison.OrdinalIgnoreCase))
                     return Uri.UnescapeDataString(kv[1]);
             }
             return "";
@@ -365,11 +380,11 @@ namespace WOLe.ActionsServer
 
         private static void WriteResponse(HttpListenerResponse response, int statusCode, string body)
         {
-            response.StatusCode      = statusCode;
-            var bytes                = Encoding.UTF8.GetBytes(body);
-            response.ContentType     = "text/plain; charset=utf-8";
+            response.StatusCode = statusCode;
+            var bytes = Encoding.UTF8.GetBytes(body);
+            response.ContentType = "text/plain; charset=utf-8";
             response.ContentLength64 = bytes.Length;
-            using var output         = response.OutputStream;
+            using var output = response.OutputStream;
             output.Write(bytes, 0, bytes.Length);
         }
 
@@ -378,17 +393,37 @@ namespace WOLe.ActionsServer
             try
             {
                 Log($"Running: {fileName} {arguments}");
-                using var p = Process.Start(new ProcessStartInfo
+
+                var psi = new ProcessStartInfo
                 {
-                    FileName        = fileName,
-                    Arguments       = arguments,
+                    FileName = fileName,
+                    Arguments = arguments,
                     UseShellExecute = false,
-                    CreateNoWindow  = true
-                });
-                p?.WaitForExit();
-                Log($"Exit code: {p?.ExitCode}");
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                using var p = Process.Start(psi);
+                if (p == null)
+                {
+                    Log("ERR: Failed to start process.");
+                    return;
+                }
+
+                string output = p.StandardOutput.ReadToEnd();
+                string error = p.StandardError.ReadToEnd();
+                p.WaitForExit();
+
+                if (!string.IsNullOrWhiteSpace(output)) Log("OUT: " + output.Trim());
+                if (!string.IsNullOrWhiteSpace(error)) Log("ERR: " + error.Trim());
+
+                Log($"Exit code: {p.ExitCode}");
             }
-            catch (Exception ex) { Log("ERR RunCommand: " + ex); }
+            catch (Exception ex)
+            {
+                Log("ERR RunCommand: " + ex);
+            }
         }
 
         private static void Log(string message)

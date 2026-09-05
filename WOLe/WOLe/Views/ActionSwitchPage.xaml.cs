@@ -22,6 +22,9 @@ namespace WOLe.Provisioner.Views
         private string _launchApp7Path = "";
         private string _launchApp8Path = "";
 
+        // Added 20%
+        private static readonly int[] StepOptions = { 2, 5, 10, 15, 20, 30, 40, 50 };
+
         private static readonly (string Label, string Token)[] AllActions =
         {
             ("Restart",       "restart"),
@@ -77,17 +80,20 @@ namespace WOLe.Provisioner.Views
             var enhanced = pc.EnhancedDevices[_target.EnhancedDeviceIndex];
 
             ContextTitleText.Text = $"PC {_target.PcIndex + 1} – Enhanced Device {_target.EnhancedDeviceIndex + 1}";
-            DeviceLabelText.Text  = $"PC {_target.PcIndex + 1}";
+            DeviceLabelText.Text = $"PC {_target.PcIndex + 1}";
 
             BuildCombo(OnActionComboBox);
             BuildCombo(OffActionComboBox);
 
-            SetInitialSelection(OnActionComboBox,  enhanced.ActionOn);
+            SetInitialSelection(OnActionComboBox, enhanced.ActionOn);
             SetInitialSelection(OffActionComboBox, enhanced.ActionOff);
+
+            BuildStepCombo(VolumeUpStepComboBox, cfg.VolumeUpStepPercent);
+            BuildStepCombo(VolumeDownStepComboBox, cfg.VolumeDownStepPercent);
 
             ApplyDisabledStates();
 
-            OnActionComboBox.SelectionChanged  += ActionCombo_SelectionChanged;
+            OnActionComboBox.SelectionChanged += ActionCombo_SelectionChanged;
             OffActionComboBox.SelectionChanged += ActionCombo_SelectionChanged;
 
             if (cfg.Pcs.Count > 0)
@@ -104,6 +110,7 @@ namespace WOLe.Provisioner.Views
             }
 
             UpdatePc1AppPanels();
+            UpdateVolumeStepPanels();
         }
 
         private void BuildCombo(ComboBox combo)
@@ -111,6 +118,26 @@ namespace WOLe.Provisioner.Views
             combo.Items.Clear();
             foreach (var (label, token) in AllActions)
                 combo.Items.Add(new ComboBoxItem { Content = label, Tag = token });
+        }
+
+        private void BuildStepCombo(ComboBox combo, int selected)
+        {
+            combo.Items.Clear();
+            foreach (var step in StepOptions)
+                combo.Items.Add(new ComboBoxItem { Content = step.ToString(), Tag = step });
+
+            int selectedValid = StepOptions.Contains(selected)
+                ? selected
+                : StepOptions.OrderBy(x => System.Math.Abs(x - selected)).First();
+
+            foreach (ComboBoxItem item in combo.Items)
+            {
+                if (item.Tag is int step && step == selectedValid)
+                {
+                    combo.SelectedItem = item;
+                    break;
+                }
+            }
         }
 
         private void SetInitialSelection(ComboBox combo, string? token)
@@ -125,11 +152,11 @@ namespace WOLe.Provisioner.Views
 
         private void ApplyDisabledStates()
         {
-            var cfg      = ProvisioningState.Current;
+            var cfg = ProvisioningState.Current;
             var reserved = GetReservedActionsForPc(cfg, _target!.PcIndex, _target.EnhancedDeviceIndex);
-            string? on   = GetSelectedToken(OnActionComboBox);
-            string? off  = GetSelectedToken(OffActionComboBox);
-            DisableItems(OnActionComboBox,  reserved, on);
+            string? on = GetSelectedToken(OnActionComboBox);
+            string? off = GetSelectedToken(OffActionComboBox);
+            DisableItems(OnActionComboBox, reserved, on);
             DisableItems(OffActionComboBox, reserved, off);
         }
 
@@ -150,10 +177,31 @@ namespace WOLe.Provisioner.Views
             return null;
         }
 
+        private static int GetSelectedStep(ComboBox combo, int fallback)
+        {
+            if (combo.SelectedItem is ComboBoxItem cbi && cbi.Tag is int step)
+                return step;
+            return fallback;
+        }
+
         private void ActionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             ApplyDisabledStates();
             UpdatePc1AppPanels();
+            UpdateVolumeStepPanels();
+        }
+
+        private void UpdateVolumeStepPanels()
+        {
+            string? on = GetSelectedToken(OnActionComboBox);
+            string? off = GetSelectedToken(OffActionComboBox);
+
+            bool usesVolumeUp = on == "volumeup" || off == "volumeup";
+            bool usesVolumeDown = on == "volumedown" || off == "volumedown";
+
+            VolumeUpStepContainer.Visibility = usesVolumeUp ? Visibility.Visible : Visibility.Collapsed;
+            VolumeDownStepContainer.Visibility = usesVolumeDown ? Visibility.Visible : Visibility.Collapsed;
+            VolumeStepPanel.Visibility = (usesVolumeUp || usesVolumeDown) ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void UpdatePc1AppPanels()
@@ -164,7 +212,7 @@ namespace WOLe.Provisioner.Views
                 return;
             }
 
-            string? on  = GetSelectedToken(OnActionComboBox);
+            string? on = GetSelectedToken(OnActionComboBox);
             string? off = GetSelectedToken(OffActionComboBox);
 
             bool usesApp1 = on == "launchapp1" || off == "launchapp1";
@@ -217,11 +265,9 @@ namespace WOLe.Provisioner.Views
 
         private static void SetPathText(TextBlock tb, string path)
         {
-            tb.Text       = path;
+            tb.Text = path;
             tb.Visibility = string.IsNullOrWhiteSpace(path) ? Visibility.Collapsed : Visibility.Visible;
         }
-
-        // ── ComboBox handlers ──────────────────────────────────────────────
 
         private void LaunchApp1ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -263,8 +309,6 @@ namespace WOLe.Provisioner.Views
             if (LaunchApp8ComboBox.SelectedItem is ComboBoxItem cbi && cbi.Tag is string path)
             { _launchApp8Path = path; SetPathText(LaunchApp8PathText, path); }
         }
-
-        // ── Browse buttons ─────────────────────────────────────────────────
 
         private async void BrowseLaunchApp1_Click(object sender, RoutedEventArgs e)
         {
@@ -315,8 +359,6 @@ namespace WOLe.Provisioner.Views
             AppPickerHelper.SetComboBoxToCustomPath(LaunchApp8ComboBox, path);
         }
 
-        // ── Save ───────────────────────────────────────────────────────────
-
         public bool ValidateAndSave()
         {
             ErrorText.Visibility = Visibility.Collapsed;
@@ -330,7 +372,7 @@ namespace WOLe.Provisioner.Views
             pc.EnhancedDevices ??= new();
             if (_target.EnhancedDeviceIndex >= pc.EnhancedDevices.Count) return false;
 
-            string? on  = GetSelectedToken(OnActionComboBox);
+            string? on = GetSelectedToken(OnActionComboBox);
             string? off = GetSelectedToken(OffActionComboBox);
 
             if (string.IsNullOrWhiteSpace(on) || string.IsNullOrWhiteSpace(off))
@@ -381,15 +423,24 @@ namespace WOLe.Provisioner.Views
             }
 
             var enhanced = pc.EnhancedDevices[_target.EnhancedDeviceIndex];
-            enhanced.ActionOn  = on!;
+            enhanced.ActionOn = on!;
             enhanced.ActionOff = off!;
 
             if (_target.EnhancedDeviceIndex == 0)
             {
                 pc.ActionDeviceId = enhanced.DeviceId ?? "";
-                pc.ActionOn       = enhanced.ActionOn;
-                pc.ActionOff      = enhanced.ActionOff;
+                pc.ActionOn = enhanced.ActionOn;
+                pc.ActionOff = enhanced.ActionOff;
             }
+
+            bool usesVolumeUp = on == "volumeup" || off == "volumeup";
+            bool usesVolumeDown = on == "volumedown" || off == "volumedown";
+
+            if (usesVolumeUp)
+                cfg.VolumeUpStepPercent = GetSelectedStep(VolumeUpStepComboBox, cfg.VolumeUpStepPercent);
+
+            if (usesVolumeDown)
+                cfg.VolumeDownStepPercent = GetSelectedStep(VolumeDownStepComboBox, cfg.VolumeDownStepPercent);
 
             if (_target.PcIndex == 0)
             {
@@ -422,7 +473,7 @@ namespace WOLe.Provisioner.Views
             {
                 if (i == excludeIndex) continue;
                 var dev = pc.EnhancedDevices[i];
-                if (!string.IsNullOrWhiteSpace(dev.ActionOn))  set.Add(dev.ActionOn);
+                if (!string.IsNullOrWhiteSpace(dev.ActionOn)) set.Add(dev.ActionOn);
                 if (!string.IsNullOrWhiteSpace(dev.ActionOff)) set.Add(dev.ActionOff);
             }
 

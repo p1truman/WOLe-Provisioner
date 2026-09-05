@@ -71,6 +71,12 @@ String enhancedActionOff[MAX_ENHANCED_DEVICE_COUNT] = {
 };
 
 /************************************************************
+ *  De-dup state tracking for enhanced switches
+ ************************************************************/
+bool lastEnhancedState[MAX_ENHANCED_DEVICE_COUNT];
+bool lastEnhancedStateKnown[MAX_ENHANCED_DEVICE_COUNT];
+
+/************************************************************
  *  RGB LED (WS2812 on GPIO 48)
  ************************************************************/
 #define LED_PIN   48
@@ -135,6 +141,62 @@ void triggerFlash(LedState flashState) {
   flashStartTime = millis();
   flashDuration  = (flashState == LED_FLASH_RAINBOW) ? launchAppRainbowDuration : 300;
   flashEndTime   = flashStartTime + flashDuration;
+}
+
+/************************************************************
+ *  Custom blink sequences
+ ************************************************************/
+void blinkColor(uint8_t r, uint8_t g, uint8_t b, int onMs = 120, int offMs = 90) {
+  setLED(r, g, b);
+  delay(onMs);
+  setLED(0, 0, 0);
+  delay(offMs);
+}
+
+void playMutePattern() {
+  blinkColor(255, 0, 0);
+  blinkColor(255, 0, 0);
+}
+
+void playUnmutePattern() {
+  blinkColor(0, 255, 0);
+  blinkColor(0, 255, 0);
+}
+
+void playVolumeUpPattern() {
+  blinkColor(0, 255, 0);
+  blinkColor(255, 220, 0);
+  blinkColor(255, 0, 0);
+}
+
+void playVolumeDownPattern() {
+  blinkColor(255, 0, 0);
+  blinkColor(255, 220, 0);
+  blinkColor(0, 255, 0);
+}
+
+void playActionPattern(const String& action) {
+  if (action == "mute")       { playMutePattern(); return; }
+  if (action == "unmute")     { playUnmutePattern(); return; }
+  if (action == "volumeup")   { playVolumeUpPattern(); return; }
+  if (action == "volumedown") { playVolumeDownPattern(); return; }
+
+  if (action == "restart")    { triggerFlash(LED_FLASH_YELLOW); return; }
+  if (action == "sleep")      { triggerFlash(LED_FLASH_PINK); return; }
+  if (action == "hibernate")  { triggerFlash(LED_FLASH_WHITE); return; }
+  if (action == "lock")       { triggerFlash(LED_FLASH_ORANGE); return; }
+  if (action == "screenoff")  { triggerFlash(LED_FLASH_PURPLE); return; }
+
+  if (action == "launchapp1" || action == "launchapp2" ||
+      action == "launchapp3" || action == "launchapp4" ||
+      action == "launchapp5" || action == "launchapp6" ||
+      action == "launchapp7" || action == "launchapp8")
+  {
+    triggerFlash(LED_FLASH_RAINBOW);
+    return;
+  }
+
+  triggerFlash(LED_FLASH_WHITE);
 }
 
 void updateLed() {
@@ -202,7 +264,7 @@ void sendWOL(const char* macStr) {
 /************************************************************
  *  HTTP ACTION HELPERS
  ************************************************************/
-void sendActionRequest(String baseUrl, String action, LedState flashColor) {
+void sendActionRequest(String baseUrl, String action) {
   WiFiClient client;
 
   String url = baseUrl + "/" + action + "?key=" + SHUTDOWN_SECRET;
@@ -234,42 +296,7 @@ void sendActionRequest(String baseUrl, String action, LedState flashColor) {
   }
 
   client.stop();
-  triggerFlash(flashColor);
-}
-
-/************************************************************
- *  LED COLOUR MAP FOR ACTIONS
- *
- *  Colour guide:
- *    GREEN   = wake
- *    RED     = shutdown
- *    YELLOW  = restart
- *    PINK    = sleep
- *    WHITE   = hibernate
- *    ORANGE  = lock
- *    PURPLE  = screen off
- *    CYAN    = mute / unmute / volume
- *    RAINBOW = any launch app (1–8)
- ************************************************************/
-LedState getFlashColorForAction(String action) {
-  if (action == "restart")     return LED_FLASH_YELLOW;
-  if (action == "sleep")       return LED_FLASH_PINK;
-  if (action == "hibernate")   return LED_FLASH_WHITE;
-  if (action == "lock")        return LED_FLASH_ORANGE;
-  if (action == "screenoff")   return LED_FLASH_PURPLE;
-  if (action == "mute")        return LED_FLASH_CYAN;
-  if (action == "unmute")      return LED_FLASH_CYAN;
-  if (action == "volumeup")    return LED_FLASH_CYAN;
-  if (action == "volumedown")  return LED_FLASH_CYAN;
-  if (action == "launchapp1")  return LED_FLASH_RAINBOW;
-  if (action == "launchapp2")  return LED_FLASH_RAINBOW;
-  if (action == "launchapp3")  return LED_FLASH_RAINBOW;
-  if (action == "launchapp4")  return LED_FLASH_RAINBOW;
-  if (action == "launchapp5")  return LED_FLASH_RAINBOW;
-  if (action == "launchapp6")  return LED_FLASH_RAINBOW;
-  if (action == "launchapp7")  return LED_FLASH_RAINBOW;
-  if (action == "launchapp8")  return LED_FLASH_RAINBOW;
-  return LED_FLASH_WHITE;
+  playActionPattern(action);
 }
 
 /************************************************************
@@ -306,25 +333,57 @@ void evaluatePowerSequence() {
 
   int i = currentPowerPcIndex;
 
-  if (s == "1") { sendWOL(pcMacs[i].c_str()); triggerFlash(LED_FLASH_GREEN); return; }
-  if (s == "0") { sendActionRequest(pcShutdownURLs[i], "shutdown", LED_FLASH_RED); return; }
-  if (s == "01") { sendActionRequest(pcShutdownURLs[i], "restart", LED_FLASH_YELLOW); return; }
+  if (s == "1") {
+    sendWOL(pcMacs[i].c_str());
+    triggerFlash(LED_FLASH_GREEN);
+    return;
+  }
+
+  if (s == "0") {
+    sendActionRequest(pcShutdownURLs[i], "shutdown");
+    return;
+  }
+
+  if (s == "01") {
+    sendActionRequest(pcShutdownURLs[i], "restart");
+    return;
+  }
 }
 
 /************************************************************
  *  ACTION SWITCH HANDLER (Enhanced Devices)
+ *  - Allows both ON/OFF actions
+ *  - Suppresses duplicate repeated same-state events
+ *  - Volume up/down are repeatable (always send, even same state)
  ************************************************************/
+bool isRepeatableAction(const String& action) {
+  return action == "volumeup" || action == "volumedown";
+}
+
 void handleActionSwitch(const String &deviceId, bool state) {
   for (int i = 0; i < ENHANCED_DEVICE_COUNT; i++) {
     if (deviceId == enhancedDeviceIDs[i]) {
       int pcIndex = enhancedDevicePcIndexes[i];
-      if (pcIndex < 0 || pcIndex >= PC_COUNT) continue;
+      if (pcIndex < 0 || pcIndex >= PC_COUNT) {
+        Serial.println("Invalid PC index for enhanced action.");
+        return;
+      }
 
-      String   action = state ? enhancedActionOn[i] : enhancedActionOff[i];
-      LedState color  = getFlashColorForAction(action);
+      String action = state ? enhancedActionOn[i] : enhancedActionOff[i];
 
-      Serial.println("Action switch [PC" + String(pcIndex + 1) + "] -> " + action);
-      sendActionRequest(pcShutdownURLs[pcIndex], action, color);
+      // suppress duplicates except for repeatable actions (volume up/down)
+      if (!isRepeatableAction(action)) {
+        if (lastEnhancedStateKnown[i] && lastEnhancedState[i] == state) {
+          Serial.println("Ignoring duplicate enhanced state event.");
+          return;
+        }
+      }
+
+      lastEnhancedStateKnown[i] = true;
+      lastEnhancedState[i] = state;
+
+      Serial.println("Action switch [PC" + String(pcIndex + 1) + "] state=" + String(state ? "ON" : "OFF") + " -> " + action);
+      sendActionRequest(pcShutdownURLs[pcIndex], action);
       return;
     }
   }
@@ -341,6 +400,7 @@ bool onPowerState(const String &deviceId, bool state) {
       return true;
     }
   }
+
   handleActionSwitch(deviceId, state);
   return true;
 }
@@ -382,6 +442,11 @@ void setupSinric() {
 void setup() {
   Serial.begin(115200);
   delay(300);
+
+  for (int i = 0; i < MAX_ENHANCED_DEVICE_COUNT; i++) {
+    lastEnhancedStateKnown[i] = false;
+    lastEnhancedState[i] = false;
+  }
 
   led.begin();
   led.setBrightness(255);

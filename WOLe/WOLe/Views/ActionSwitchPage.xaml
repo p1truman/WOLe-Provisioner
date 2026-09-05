@@ -24,11 +24,13 @@
                            Margin="0,4,0,0"
                            Foreground="{ThemeResource ConfigHeaderBrush}" />
 
-                <Grid Margin="0,8,0,0">
+                <!-- Fixed-width action row -->
+                <Grid Margin="0,8,0,0"
+                      HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="60" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="220" />
+                        <ColumnDefinition Width="220" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" />
                     <TextBlock Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource ConfigSectionHeaderStyle}">
@@ -41,11 +43,13 @@
                     </TextBlock>
                 </Grid>
 
-                <Grid Margin="0,4,0,0" ColumnSpacing="16">
+                <Grid Margin="0,4,0,0"
+                      ColumnSpacing="16"
+                      HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="60" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="220" />
+                        <ColumnDefinition Width="220" />
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="DeviceLabelText"
                                Grid.Column="0"
@@ -55,15 +59,45 @@
                                Foreground="{ThemeResource ConfigAccentBrush}" />
                     <ComboBox x:Name="OnActionComboBox"
                               Grid.Column="1"
-                              HorizontalAlignment="Stretch"
+                              Width="220"
+                              HorizontalAlignment="Left"
                               PlaceholderText="Select ON action..." />
                     <ComboBox x:Name="OffActionComboBox"
                               Grid.Column="2"
-                              HorizontalAlignment="Stretch"
+                              Width="220"
+                              HorizontalAlignment="Left"
                               PlaceholderText="Select OFF action..." />
                 </Grid>
 
-                <!-- APP BINDINGS PANEL — only shown for PC 1 when a launchapp action is selected -->
+                <!-- Volume step panel -->
+                <StackPanel x:Name="VolumeStepPanel"
+                            Visibility="Collapsed"
+                            Spacing="12"
+                            Margin="0,8,0,0">
+                    <TextBlock Text="Volume Step Settings"
+                               Style="{StaticResource ConfigSectionHeaderStyle}" />
+                    <TextBlock Text="Set independent step sizes used by Volume Up and Volume Down actions."
+                               Style="{StaticResource ConfigBodyTextStyle}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel x:Name="VolumeUpStepContainer" Grid.Column="0" Visibility="Collapsed" Spacing="6">
+                            <TextBlock Text="Volume Up Step (%)" Style="{StaticResource ConfigSectionHeaderStyle}" />
+                            <ComboBox x:Name="VolumeUpStepComboBox" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="VolumeDownStepContainer" Grid.Column="1" Visibility="Collapsed" Spacing="6">
+                            <TextBlock Text="Volume Down Step (%)" Style="{StaticResource ConfigSectionHeaderStyle}" />
+                            <ComboBox x:Name="VolumeDownStepComboBox" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                <!-- APP BINDINGS PANEL -->
                 <StackPanel x:Name="Pc1AppBindingsPanel"
                             Visibility="Collapsed"
                             Spacing="16"
@@ -75,7 +109,6 @@
                     <TextBlock Text="Select the local application to launch when these actions are triggered on PC 1. Other PCs can be configured when running the Enhanced Actions Installer on those machines."
                                Style="{StaticResource ConfigBodyTextStyle}" />
 
-                    <!-- Launch App 1 -->
                     <StackPanel x:Name="LaunchApp1Panel" Visibility="Collapsed" Spacing="6">
                         <TextBlock Text="Launch App 1" Style="{StaticResource ConfigSectionHeaderStyle}" />
                         <Grid ColumnSpacing="8">
@@ -89,7 +122,6 @@
                         <TextBlock x:Name="LaunchApp1PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
                     </StackPanel>
 
-                    <!-- Launch App 2 -->
                     <StackPanel x:Name="LaunchApp2Panel" Visibility="Collapsed" Spacing="6">
                         <TextBlock Text="Launch App 2" Style="{StaticResource ConfigSectionHeaderStyle}" />
                         <Grid ColumnSpacing="8">
@@ -103,7 +135,6 @@
                         <TextBlock x:Name="LaunchApp2PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
                     </StackPanel>
 
-                    <!-- Launch App 3 -->
                     <StackPanel x:Name="LaunchApp3Panel" Visibility="Collapsed" Spacing="6">
                         <TextBlock Text="Launch App 3" Style="{StaticResource ConfigSectionHeaderStyle}" />
                         <Grid ColumnSpacing="8">
@@ -117,7 +148,6 @@
                         <TextBlock x:Name="LaunchApp3PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
                     </StackPanel>
 
-                    <!-- Launch App 4 -->
                     <StackPanel x:Name="LaunchApp4Panel" Visibility="Collapsed" Spacing="6">
                         <TextBlock Text="Launch App 4" Style="{StaticResource ConfigSectionHeaderStyle}" />
                         <Grid ColumnSpacing="8">
@@ -131,7 +161,6 @@
                         <TextBlock x:Name="LaunchApp4PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
                     </StackPanel>
 
-                    <!-- Launch App 5 -->
                     <StackPanel x:Name="LaunchApp5Panel" Visibility="Collapsed" Spacing="6">
                         <TextBlock Text="Launch App 5" Style="{StaticResource ConfigSectionHeaderStyle}" />
                         <Grid ColumnSpacing="8">
@@ -145,7 +174,6 @@
                         <TextBlock x:Name="LaunchApp5PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
                     </StackPanel>
 
-                    <!-- Launch App 6 -->
                     <StackPanel x:Name="LaunchApp6Panel" Visibility="Collapsed" Spacing="6">
                         <TextBlock Text="Launch App 6" Style="{StaticResource ConfigSectionHeaderStyle}" />
                         <Grid ColumnSpacing="8">
@@ -159,7 +187,6 @@
                         <TextBlock x:Name="LaunchApp6PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
                     </StackPanel>
 
-                    <!-- Launch App 7 -->
                     <StackPanel x:Name="LaunchApp7Panel" Visibility="Collapsed" Spacing="6">
                         <TextBlock Text="Launch App 7" Style="{StaticResource ConfigSectionHeaderStyle}" />
                         <Grid ColumnSpacing="8">
@@ -173,7 +200,6 @@
                         <TextBlock x:Name="LaunchApp7PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
                     </StackPanel>
 
-                    <!-- Launch App 8 -->
                     <StackPanel x:Name="LaunchApp8Panel" Visibility="Collapsed" Spacing="6">
                         <TextBlock Text="Launch App 8" Style="{StaticResource ConfigSectionHeaderStyle}" />
                         <Grid ColumnSpacing="8">

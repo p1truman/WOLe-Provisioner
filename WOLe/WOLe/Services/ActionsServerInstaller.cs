@@ -16,8 +16,6 @@ namespace WOLe.Provisioner.Services
 
         private readonly DispatcherQueue _ui;
 
-        private const int VolumeStepPercent = 15;
-
         public ActionsServerInstaller()
         {
             _ui = DispatcherQueue.GetForCurrentThread();
@@ -40,13 +38,17 @@ namespace WOLe.Provisioner.Services
         private string ServerExePath =>
             Path.Combine(ActionsServiceRoot, "ActionsServer.exe");
 
+        private string NirCmdPath =>
+            Path.Combine(ActionsServiceRoot, "nircmd.exe");
+
         private string ToolsRoot =>
             Path.Combine(AppContext.BaseDirectory, "Tools");
 
         private string ToolsServerExe =>
             Path.Combine(ToolsRoot, "ActionsServer.exe");
 
-        // ── Install / Uninstall ────────────────────────────────────────────
+        private string ToolsNirCmdExe =>
+            Path.Combine(ToolsRoot, "nircmd.exe");
 
         public void InstallShutdownService(ProvisioningConfig cfg, WizardMode mode)
         {
@@ -55,7 +57,7 @@ namespace WOLe.Provisioner.Services
 
             Directory.CreateDirectory(ActionsServiceRoot);
 
-            EnsureServerBinary();
+            EnsureServiceBinaries();
             InstallUnifiedActionServer(cfg, mode);
             InstallFirewallRule(cfg, mode);
 
@@ -90,8 +92,6 @@ namespace WOLe.Provisioner.Services
             Append("=== Uninstall Complete ===");
         }
 
-        // ── Server binary ──────────────────────────────────────────────────
-
         private void StopRunningServer()
         {
             try
@@ -112,7 +112,10 @@ namespace WOLe.Provisioner.Services
                         {
                             Append($"WARN: Could not stop ActionsServer PID {proc.Id}: {ex.Message}");
                         }
-                        finally { proc.Dispose(); }
+                        finally
+                        {
+                            proc.Dispose();
+                        }
                     }
                     System.Threading.Thread.Sleep(500);
                 }
@@ -127,13 +130,20 @@ namespace WOLe.Provisioner.Services
             }
         }
 
-        private void EnsureServerBinary()
+        private void EnsureServiceBinaries()
         {
-            Append("Checking ActionsServer.exe...");
+            Append("Checking service binaries...");
 
             if (!File.Exists(ToolsServerExe))
             {
                 Append("ERR: ActionsServer.exe not found in Tools folder.");
+                return;
+            }
+
+            if (!File.Exists(ToolsNirCmdExe))
+            {
+                Append("ERR: nircmd.exe not found in Tools folder.");
+                Append("Expected path: " + ToolsNirCmdExe);
                 return;
             }
 
@@ -142,9 +152,10 @@ namespace WOLe.Provisioner.Services
 
             File.Copy(ToolsServerExe, ServerExePath, true);
             Append($"Copied ActionsServer.exe to: {ServerExePath}");
-        }
 
-        // ── Local PC matching ──────────────────────────────────────────────
+            File.Copy(ToolsNirCmdExe, NirCmdPath, true);
+            Append($"Copied nircmd.exe to: {NirCmdPath}");
+        }
 
         private string GetLocalIPAddress()
         {
@@ -180,29 +191,48 @@ namespace WOLe.Provisioner.Services
             return match;
         }
 
-        // ── Server installation ────────────────────────────────────────────
+        private static int ClampStep(int value)
+        {
+            // Added 20 to allowed steps
+            int[] allowed = { 2, 5, 10, 15, 20, 30, 40, 50 };
+
+            int nearest = allowed[0];
+            int bestDiff = Math.Abs(value - nearest);
+
+            for (int i = 1; i < allowed.Length; i++)
+            {
+                int diff = Math.Abs(value - allowed[i]);
+                if (diff < bestDiff)
+                {
+                    bestDiff = diff;
+                    nearest = allowed[i];
+                }
+            }
+
+            return nearest;
+        }
 
         private void InstallUnifiedActionServer(ProvisioningConfig cfg, WizardMode mode)
         {
-            string configPath  = Path.Combine(ActionsServiceRoot, "config.json");
-            PcConfig? localPc  = MatchLocalPc(cfg);
-            bool shutdownOnly  = mode == WizardMode.ShutdownOnly;
+            string configPath = Path.Combine(ActionsServiceRoot, "config.json");
 
-            int    port;
+            PcConfig? localPc = MatchLocalPc(cfg);
+            bool shutdownOnly = mode == WizardMode.ShutdownOnly;
+
+            int port;
             string secret;
 
             if (shutdownOnly || localPc == null)
             {
-                port   = cfg.ShutdownPcPort ?? 5050;
+                port = cfg.ShutdownPcPort ?? 5050;
                 secret = cfg.ShutdownSecret;
             }
             else
             {
-                port   = localPc.Port > 0 ? localPc.Port : 5050;
+                port = localPc.Port > 0 ? localPc.Port : 5050;
                 secret = cfg.ShutdownSecret;
             }
 
-            // App binding paths always come from Pcs[0] — single source of truth.
             var pc1 = cfg.Pcs != null && cfg.Pcs.Count > 0 ? cfg.Pcs[0] : null;
 
             string app1 = pc1?.LaunchApp1Path ?? "";
@@ -214,13 +244,18 @@ namespace WOLe.Provisioner.Services
             string app7 = pc1?.LaunchApp7Path ?? "";
             string app8 = pc1?.LaunchApp8Path ?? "";
 
+            int upStep = ClampStep(cfg.VolumeUpStepPercent);
+            int downStep = ClampStep(cfg.VolumeDownStepPercent);
+
             string esc(string s) => (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
 
             File.WriteAllText(configPath,
 $@"{{
   ""port"": {port},
   ""secret"": ""{esc(secret)}"",
-  ""volumeStep"": {VolumeStepPercent},
+  ""volumeUpStep"": {upStep},
+  ""volumeDownStep"": {downStep},
+  ""volumeStep"": {upStep},
   ""launchApp1"": ""{esc(app1)}"",
   ""launchApp2"": ""{esc(app2)}"",
   ""launchApp3"": ""{esc(app3)}"",
@@ -232,16 +267,8 @@ $@"{{
 }}");
 
             Append($"Generated config.json: {configPath}");
-            Append($"Volume step: {VolumeStepPercent}%");
-
-            if (!string.IsNullOrWhiteSpace(app1)) Append("App 1 binding: configured");
-            if (!string.IsNullOrWhiteSpace(app2)) Append("App 2 binding: configured");
-            if (!string.IsNullOrWhiteSpace(app3)) Append("App 3 binding: configured");
-            if (!string.IsNullOrWhiteSpace(app4)) Append("App 4 binding: configured");
-            if (!string.IsNullOrWhiteSpace(app5)) Append("App 5 binding: configured");
-            if (!string.IsNullOrWhiteSpace(app6)) Append("App 6 binding: configured");
-            if (!string.IsNullOrWhiteSpace(app7)) Append("App 7 binding: configured");
-            if (!string.IsNullOrWhiteSpace(app8)) Append("App 8 binding: configured");
+            Append($"Configured volumeUpStep: {upStep}%");
+            Append($"Configured volumeDownStep: {downStep}%");
 
             InstallScheduledTask();
 
@@ -250,9 +277,9 @@ $@"{{
                 Append("Starting ActionsServer...");
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName        = ServerExePath,
+                    FileName = ServerExePath,
                     UseShellExecute = false,
-                    CreateNoWindow  = true
+                    CreateNoWindow = true
                 });
                 Append("ActionsServer started.");
             }
@@ -261,8 +288,6 @@ $@"{{
                 Append("WARN: Could not auto-start ActionsServer after install: " + ex.Message);
             }
         }
-
-        // ── Scheduled task ─────────────────────────────────────────────────
 
         private void InstallScheduledTask()
         {
@@ -273,9 +298,9 @@ $@"{{
 
             Append("Installing per-user hidden scheduled task...");
 
-            var    user             = $"{Environment.UserDomainName}\\{Environment.UserName}";
-            var    registrationDate = DateTime.UtcNow.ToString("s") + "Z";
-            string command          = ServerExePath;
+            var user = $"{Environment.UserDomainName}\\{Environment.UserName}";
+            var registrationDate = DateTime.UtcNow.ToString("s") + "Z";
+            string command = ServerExePath;
 
             string taskXml =
 $@"<?xml version=""1.0"" encoding=""UTF-16""?>
@@ -338,16 +363,13 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
             }
         }
 
-        // ── Firewall ───────────────────────────────────────────────────────
-
         private void InstallFirewallRule(ProvisioningConfig cfg, WizardMode mode)
         {
             Append("Configuring Windows Firewall...");
             RemoveFirewallRule();
 
             RunCommand("netsh",
-                $"advfirewall firewall add rule name=\"WOL-e Actions Server\" " +
-                $"dir=in action=allow program=\"{ServerExePath}\" enable=yes");
+                $"advfirewall firewall add rule name=\"WOL-e Actions Server\" dir=in action=allow program=\"{ServerExePath}\" enable=yes");
 
             Append("Program-based firewall rule added.");
 
@@ -358,14 +380,18 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
                     if (!string.IsNullOrWhiteSpace(pc.IpAddress) && pc.Port > 0)
                     {
                         RunCommand("netsh",
-                            $"advfirewall firewall add rule name=\"WOL-e Actions Server Port {pc.Port}\" " +
-                            $"dir=in action=allow protocol=TCP localport={pc.Port} profile=private enable=yes");
-
+                            $"advfirewall firewall add rule name=\"WOL-e Actions Server Port {pc.Port}\" dir=in action=allow protocol=TCP localport={pc.Port} profile=private enable=yes");
                         Append($"Firewall port rule added for PC port {pc.Port}");
 
-                        try { AddUrlAcl(pc.Port); Append($"URL ACL added for port {pc.Port}"); }
+                        try
+                        {
+                            AddUrlAcl(pc.Port);
+                            Append($"URL ACL added for port {pc.Port}");
+                        }
                         catch (Exception ex)
-                        { Append($"WARN: URL ACL add failed for port {pc.Port}: {ex.Message} (requires admin)"); }
+                        {
+                            Append($"WARN: URL ACL add failed for port {pc.Port}: {ex.Message} (requires admin)");
+                        }
                     }
                 }
             }
@@ -375,14 +401,19 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
                 int shutdownPort = cfg.ShutdownPcPort.Value;
 
                 RunCommand("netsh",
-                    $"advfirewall firewall add rule name=\"WOL-e Shutdown Server Port {shutdownPort}\" " +
-                    $"dir=in action=allow protocol=TCP localport={shutdownPort} profile=private enable=yes");
+                    $"advfirewall firewall add rule name=\"WOL-e Shutdown Server Port {shutdownPort}\" dir=in action=allow protocol=TCP localport={shutdownPort} profile=private enable=yes");
 
                 Append($"Firewall port rule added for shutdown-only port {shutdownPort}");
 
-                try { AddUrlAcl(shutdownPort); Append($"URL ACL added for shutdown port {shutdownPort}"); }
+                try
+                {
+                    AddUrlAcl(shutdownPort);
+                    Append($"URL ACL added for shutdown port {shutdownPort}");
+                }
                 catch (Exception ex)
-                { Append($"WARN: URL ACL add failed for shutdown port {shutdownPort}: {ex.Message} (requires admin)"); }
+                {
+                    Append($"WARN: URL ACL add failed for shutdown port {shutdownPort}: {ex.Message} (requires admin)");
+                }
             }
 
             Append("Firewall configuration complete.");
@@ -402,8 +433,8 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
                 if (File.Exists(configPath))
                 {
                     string json = File.ReadAllText(configPath);
-                    using var doc  = JsonDocument.Parse(json);
-                    var       root = doc.RootElement;
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
 
                     if (root.TryGetProperty("port", out var portProp) &&
                         portProp.ValueKind == JsonValueKind.Number)
@@ -414,9 +445,15 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
                         RunCommand("netsh", $"advfirewall firewall delete rule protocol=TCP localport={port}");
                         Append($"Removed firewall rules for port {port}");
 
-                        try { RemoveUrlAcl(port); Append($"Removed URL ACL for port {port}"); }
+                        try
+                        {
+                            RemoveUrlAcl(port);
+                            Append($"Removed URL ACL for port {port}");
+                        }
                         catch (Exception ex)
-                        { Append($"WARN: RemoveUrlAcl failed for port {port}: {ex.Message} (requires admin)"); }
+                        {
+                            Append($"WARN: RemoveUrlAcl failed for port {port}: {ex.Message} (requires admin)");
+                        }
                     }
                 }
                 else
@@ -432,8 +469,6 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
             }
         }
 
-        // ── URL ACL helpers ────────────────────────────────────────────────
-
         private void AddUrlAcl(int port)
         {
             string user = $"{Environment.UserDomainName}\\{Environment.UserName}";
@@ -445,31 +480,33 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
             RunCommand("netsh", $"http delete urlacl url=http://+:{port}/");
         }
 
-        // ── Utilities ──────────────────────────────────────────────────────
-
         private void RunCommand(string fileName, string arguments)
         {
             Append($"Running: {fileName} {arguments}");
 
             var psi = new ProcessStartInfo
             {
-                FileName               = fileName,
-                Arguments              = arguments,
+                FileName = fileName,
+                Arguments = arguments,
                 RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-                UseShellExecute        = false,
-                CreateNoWindow         = true
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
             };
 
             using var p = Process.Start(psi);
-            if (p == null) { Append("ERR: Failed to start process."); return; }
+            if (p == null)
+            {
+                Append("ERR: Failed to start process.");
+                return;
+            }
 
             string output = p.StandardOutput.ReadToEnd();
-            string error  = p.StandardError.ReadToEnd();
+            string error = p.StandardError.ReadToEnd();
             p.WaitForExit();
 
             if (!string.IsNullOrWhiteSpace(output)) Append(output.Trim());
-            if (!string.IsNullOrWhiteSpace(error))  Append("ERR: " + error.Trim());
+            if (!string.IsNullOrWhiteSpace(error)) Append("ERR: " + error.Trim());
 
             Append($"Exit code: {p.ExitCode}");
         }
