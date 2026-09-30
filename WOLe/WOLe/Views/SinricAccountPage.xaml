@@ -37,7 +37,7 @@
                            MaxWidth="700"
                            Margin="0,0,0,34">
                     <Run Text="For voice assistant integration, we'll need to create a" />
-                    <Run Text=" Sinric Pro " FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="Sinric Pro" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
                     <Run Text="account and add some devices (switches)." />
                 </TextBlock>
 
@@ -48,13 +48,13 @@
 
                 <!-- BODY TEXT BLOCKS -->
                 <TextBlock Style="{StaticResource ConfigBodyTextStyle}">
-                    <Run Text="Basic " />
-                    <Run Text="Wake-on-LAN" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
-                    <Run Text=" and " />
-                    <Run Text="Shutdown" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
-                    <Run Text=" functionality requires a " />
+                    <Run Text="Basic Power" />
+                    <Run Text="(Wake-on-LAN" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="and" />
+                    <Run Text="Shutdown)" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
+                    <Run Text="functionality requires a" />
                     <Run Text="single device for each PC" FontWeight="SemiBold" Foreground="{ThemeResource ConfigHeaderBrush}" />
-                    <Run Text=" on your WOL-e network." />
+                    <Run Text="on your WOL-e network." />
                 </TextBlock>
 
                 <TextBlock Style="{StaticResource ConfigBodyTextStyle}"
