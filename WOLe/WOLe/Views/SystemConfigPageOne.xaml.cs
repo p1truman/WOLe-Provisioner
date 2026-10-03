@@ -11,6 +11,11 @@ namespace WOLe.Provisioner.Views
         {
             InitializeComponent();
 
+            // Flow marker text
+            FlowSubtitleText.Text = App.CurrentMode == WizardMode.FullWoleSetup
+                ? "To begin, youll need to complete the BIOS configuration steps and Network Provisioning below. "
+                : "If you've previously attented to the steps below or require lauch app mapping reassignment, click next.";
+
             // Subscribe to the provisioning control's events.
             // When the user clicks Optimise and a static IP is successfully applied,
             // forward the values into ProvisioningState for the appropriate flow.

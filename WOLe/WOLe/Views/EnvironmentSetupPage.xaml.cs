@@ -28,11 +28,12 @@ namespace WOLe.Provisioner.Views
 
         private async void SetupButton_Click(object sender, RoutedEventArgs e)
         {
-            // Reset UI state
             ErrorText.Visibility = Visibility.Collapsed;
             _setupComplete = false;
 
             SetupButton.IsEnabled = false;
+            SkipButton.IsEnabled = false;
+
             Progress.Visibility = Visibility.Visible;
             Progress.IsIndeterminate = false;
             Progress.Value = 0;
@@ -52,6 +53,8 @@ namespace WOLe.Provisioner.Views
                 {
                     LogTextBox.Text += "Environment setup complete." + Environment.NewLine;
                     SetupButton.Content = "Completed";
+                    SetupButton.IsEnabled = false;
+                    SkipButton.IsEnabled = true;
                 });
             }
             catch (Exception ex)
@@ -60,8 +63,18 @@ namespace WOLe.Provisioner.Views
                 {
                     LogTextBox.Text += $"ERROR: {ex.Message}" + Environment.NewLine;
                     SetupButton.IsEnabled = true;
+                    SkipButton.IsEnabled = true;
                 });
             }
+        }
+
+        private void SkipButton_Click(object sender, RoutedEventArgs e)
+        {
+            _setupComplete = true;
+            ErrorText.Visibility = Visibility.Collapsed;
+
+            // No log text written when skipping
+            WizardService.GoNext(this);
         }
 
         private void UpdateProgress(double value)

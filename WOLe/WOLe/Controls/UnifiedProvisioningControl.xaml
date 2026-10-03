@@ -187,17 +187,7 @@
                             Click="EnableWol_Click" />
                 </Grid>
 
-                <TextBlock Style="{StaticResource ProvisioningBodyTextStyle}"
-                           HorizontalAlignment="Left"
-                           TextAlignment="Left"
-                           Margin="0,14,0,0">
-                    <Run Text="Before proceeding, click" />
-                    <Run Text="Adapter Details"
-                         FontWeight="SemiBold"
-                         Foreground="{ThemeResource ConfigHeaderBrush}" />
-                    <Run Text="to copy credentials to clipboard. They'll be requested shortly." />
-                </TextBlock>
-
+                
             </StackPanel>
 
             <TextBlock x:Name="StatusText"

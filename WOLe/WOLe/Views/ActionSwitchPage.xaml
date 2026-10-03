@@ -6,7 +6,7 @@
     <Grid Padding="32">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="24"
-                        MaxWidth="660"
+                        MaxWidth="700"
                         HorizontalAlignment="Center">
 
                 <TextBlock Text="WOL-e Enhanced Functionality"
@@ -28,9 +28,9 @@
                 <Grid Margin="0,8,0,0"
                       HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="60" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="220" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="290" />
+                        <ColumnDefinition Width="290" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" />
                     <TextBlock Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource ConfigSectionHeaderStyle}">
@@ -47,9 +47,9 @@
                       ColumnSpacing="16"
                       HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="60" />
-                        <ColumnDefinition Width="220" />
-                        <ColumnDefinition Width="220" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="290" />
+                        <ColumnDefinition Width="290" />
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="DeviceLabelText"
                                Grid.Column="0"
@@ -59,12 +59,12 @@
                                Foreground="{ThemeResource ConfigAccentBrush}" />
                     <ComboBox x:Name="OnActionComboBox"
                               Grid.Column="1"
-                              Width="220"
+                              Width="290"
                               HorizontalAlignment="Left"
                               PlaceholderText="Select ON action..." />
                     <ComboBox x:Name="OffActionComboBox"
                               Grid.Column="2"
-                              Width="220"
+                              Width="290"
                               HorizontalAlignment="Left"
                               PlaceholderText="Select OFF action..." />
                 </Grid>
