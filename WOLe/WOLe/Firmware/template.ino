@@ -77,6 +77,21 @@ bool lastEnhancedState[MAX_ENHANCED_DEVICE_COUNT];
 bool lastEnhancedStateKnown[MAX_ENHANCED_DEVICE_COUNT];
 
 /************************************************************
+ *  De-dup + sequence state tracking for POWER switches (per PC)
+ ************************************************************/
+bool lastPowerState[5];
+bool lastPowerStateKnown[5];
+
+String powerSeqByPc[5];
+unsigned long powerLastEventTimeByPc[5];
+const unsigned long powerSeqTimeout = 1000;
+
+/************************************************************
+ *  HTTP delivery settings
+ ************************************************************/
+const uint32_t ACTION_CONNECT_TIMEOUT_MS = 2000;
+
+/************************************************************
  *  RGB LED (WS2812 on GPIO 48)
  ************************************************************/
 #define LED_PIN   48
@@ -175,12 +190,21 @@ void playVolumeDownPattern() {
   blinkColor(0, 255, 0);
 }
 
+// Distinct connection failure pattern:
+// three quick cyan blinks
+void playConnectionFailPattern() {
+  blinkColor(0, 255, 255, 80, 70);
+  blinkColor(0, 255, 255, 80, 70);
+  blinkColor(0, 255, 255, 80, 70);
+}
+
 void playActionPattern(const String& action) {
   if (action == "mute")       { playMutePattern(); return; }
   if (action == "unmute")     { playUnmutePattern(); return; }
   if (action == "volumeup")   { playVolumeUpPattern(); return; }
   if (action == "volumedown") { playVolumeDownPattern(); return; }
 
+  if (action == "shutdown")   { triggerFlash(LED_FLASH_RED); return; }
   if (action == "restart")    { triggerFlash(LED_FLASH_YELLOW); return; }
   if (action == "sleep")      { triggerFlash(LED_FLASH_PINK); return; }
   if (action == "hibernate")  { triggerFlash(LED_FLASH_WHITE); return; }
@@ -263,9 +287,17 @@ void sendWOL(const char* macStr) {
 
 /************************************************************
  *  HTTP ACTION HELPERS
+ *  - Success pattern is shown only when connect + request write succeed
+ *  - Connection failure shows a distinct failure pattern
  ************************************************************/
 void sendActionRequest(String baseUrl, String action) {
   WiFiClient client;
+
+  if (baseUrl.length() == 0) {
+    Serial.println("ERR: Empty baseUrl for action: " + action);
+    playConnectionFailPattern();
+    return;
+  }
 
   String url = baseUrl + "/" + action + "?key=" + SHUTDOWN_SECRET;
 
@@ -286,66 +318,79 @@ void sendActionRequest(String baseUrl, String action) {
   Serial.println("Host: " + host);
   Serial.println("Port: " + String(port));
 
-  if (client.connect(host.c_str(), port)) {
-    client.print(String("GET /") + action + "?key=" + SHUTDOWN_SECRET +
-                 " HTTP/1.1\r\nHost: " + host +
-                 "\r\nConnection: close\r\n\r\n");
-    Serial.println("Request sent.");
-  } else {
+  client.setTimeout(ACTION_CONNECT_TIMEOUT_MS / 1000);
+
+  bool connected = client.connect(host.c_str(), port, ACTION_CONNECT_TIMEOUT_MS);
+  if (!connected) {
     Serial.println("Connection FAILED.");
+    client.stop();
+    playConnectionFailPattern();
+    return;
   }
 
+  String req =
+    String("GET /") + action + "?key=" + SHUTDOWN_SECRET +
+    " HTTP/1.1\r\nHost: " + host +
+    "\r\nConnection: close\r\n\r\n";
+
+  size_t bytesWritten = client.print(req);
+
+  if (bytesWritten == 0) {
+    Serial.println("ERR: Request write FAILED.");
+    client.stop();
+    playConnectionFailPattern();
+    return;
+  }
+
+  Serial.println("Request sent.");
   client.stop();
+
+  // Show action color/pattern only on successful connect+write
   playActionPattern(action);
 }
 
 /************************************************************
- *  POWER SWITCH SEQUENCE DETECTION (Switch A)
+ *  POWER SWITCH SEQUENCE DETECTION (Switch A) - PER PC
  ************************************************************/
-String powerSeq = "";
-unsigned long powerLastEventTime = 0;
-const unsigned long powerSeqTimeout = 1000;
-int currentPowerPcIndex = -1;
+void addPowerEvent(int pcIndex, bool state) {
+  if (pcIndex < 0 || pcIndex >= PC_COUNT) return;
 
-void addPowerEvent(bool state) {
   unsigned long now = millis();
-  if (now - powerLastEventTime > powerSeqTimeout)
-    powerSeq = "";
-  powerLastEventTime = now;
-  powerSeq += (state ? "1" : "0");
-  Serial.println("POWER SEQ = " + powerSeq);
+
+  if (now - powerLastEventTimeByPc[pcIndex] > powerSeqTimeout)
+    powerSeqByPc[pcIndex] = "";
+
+  powerLastEventTimeByPc[pcIndex] = now;
+  powerSeqByPc[pcIndex] += (state ? "1" : "0");
+
+  Serial.println("POWER SEQ [PC" + String(pcIndex + 1) + "] = " + powerSeqByPc[pcIndex]);
 }
 
-void evaluatePowerSequence() {
-  if (powerSeq == "") return;
+void evaluatePowerSequenceForPc(int pcIndex) {
+  if (pcIndex < 0 || pcIndex >= PC_COUNT) return;
+  if (powerSeqByPc[pcIndex] == "") return;
 
   unsigned long now = millis();
-  if (now - powerLastEventTime < powerSeqTimeout) return;
+  if (now - powerLastEventTimeByPc[pcIndex] < powerSeqTimeout) return;
 
-  String s = powerSeq;
-  powerSeq = "";
-  Serial.println("FINAL POWER SEQ = " + s);
+  String s = powerSeqByPc[pcIndex];
+  powerSeqByPc[pcIndex] = "";
 
-  if (currentPowerPcIndex < 0 || currentPowerPcIndex >= PC_COUNT) {
-    Serial.println("Invalid PC index for power event.");
-    return;
-  }
-
-  int i = currentPowerPcIndex;
+  Serial.println("FINAL POWER SEQ [PC" + String(pcIndex + 1) + "] = " + s);
 
   if (s == "1") {
-    sendWOL(pcMacs[i].c_str());
+    sendWOL(pcMacs[pcIndex].c_str());
     triggerFlash(LED_FLASH_GREEN);
     return;
   }
 
   if (s == "0") {
-    sendActionRequest(pcShutdownURLs[i], "shutdown");
+    sendActionRequest(pcShutdownURLs[pcIndex], "shutdown");
     return;
   }
 
   if (s == "01") {
-    sendActionRequest(pcShutdownURLs[i], "restart");
+    sendActionRequest(pcShutdownURLs[pcIndex], "restart");
     return;
   }
 }
@@ -354,10 +399,18 @@ void evaluatePowerSequence() {
  *  ACTION SWITCH HANDLER (Enhanced Devices)
  *  - Allows both ON/OFF actions
  *  - Suppresses duplicate repeated same-state events
- *  - Volume up/down are repeatable (always send, even same state)
+ *  - Volume up/down and one-shot actions are repeatable
  ************************************************************/
 bool isRepeatableAction(const String& action) {
-  return action == "volumeup" || action == "volumedown";
+  return action == "volumeup"   ||
+         action == "volumedown" ||
+         action == "lock"       ||
+         action == "screenoff"  ||
+         action == "sleep"      ||
+         action == "hibernate"  ||
+         action == "restart"    ||
+         action == "shutdown"   ||
+         action.startsWith("launchapp");
 }
 
 void handleActionSwitch(const String &deviceId, bool state) {
@@ -371,7 +424,6 @@ void handleActionSwitch(const String &deviceId, bool state) {
 
       String action = state ? enhancedActionOn[i] : enhancedActionOff[i];
 
-      // suppress duplicates except for repeatable actions (volume up/down)
       if (!isRepeatableAction(action)) {
         if (lastEnhancedStateKnown[i] && lastEnhancedState[i] == state) {
           Serial.println("Ignoring duplicate enhanced state event.");
@@ -395,8 +447,11 @@ void handleActionSwitch(const String &deviceId, bool state) {
 bool onPowerState(const String &deviceId, bool state) {
   for (int i = 0; i < PC_COUNT; i++) {
     if (deviceId == pcPowerDeviceIDs[i]) {
-      currentPowerPcIndex = i;
-      addPowerEvent(state);
+      // Always accept power events (repeatable), even if same state
+      lastPowerStateKnown[i] = true;
+      lastPowerState[i] = state;
+
+      addPowerEvent(i, state);
       return true;
     }
   }
@@ -448,6 +503,13 @@ void setup() {
     lastEnhancedState[i] = false;
   }
 
+  for (int i = 0; i < 5; i++) {
+    lastPowerStateKnown[i] = false;
+    lastPowerState[i] = false;
+    powerSeqByPc[i] = "";
+    powerLastEventTimeByPc[i] = 0;
+  }
+
   led.begin();
   led.setBrightness(255);
   setBaseState(LED_BREATH_BLUE);
@@ -480,5 +542,8 @@ void loop() {
 
   updateLed();
   SinricPro.handle();
-  evaluatePowerSequence();
+
+  for (int i = 0; i < PC_COUNT; i++) {
+    evaluatePowerSequenceForPc(i);
+  }
 }

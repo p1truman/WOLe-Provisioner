@@ -38,17 +38,15 @@ namespace WOLe.Provisioner.Services
         private string ServerExePath =>
             Path.Combine(ActionsServiceRoot, "ActionsServer.exe");
 
-        private string NirCmdPath =>
-            Path.Combine(ActionsServiceRoot, "nircmd.exe");
-
         private string ToolsRoot =>
             Path.Combine(AppContext.BaseDirectory, "Tools");
 
         private string ToolsServerExe =>
             Path.Combine(ToolsRoot, "ActionsServer.exe");
 
-        private string ToolsNirCmdExe =>
-            Path.Combine(ToolsRoot, "nircmd.exe");
+        // ------------------------------------------------------------
+        //  INSTALL / UNINSTALL
+        // ------------------------------------------------------------
 
         public void InstallShutdownService(ProvisioningConfig cfg, WizardMode mode)
         {
@@ -57,8 +55,10 @@ namespace WOLe.Provisioner.Services
 
             Directory.CreateDirectory(ActionsServiceRoot);
 
-            EnsureServiceBinaries();
+            EnsureServerBinary();
+
             InstallUnifiedActionServer(cfg, mode);
+
             InstallFirewallRule(cfg, mode);
 
             Append("=== Installation Complete ===");
@@ -69,6 +69,7 @@ namespace WOLe.Provisioner.Services
             Append("=== WOL-e Enhanced Actions Uninstaller (Native) ===");
 
             StopRunningServer();
+
             RemoveAllLegacyTasks();
             RemoveFirewallRule();
 
@@ -92,15 +93,19 @@ namespace WOLe.Provisioner.Services
             Append("=== Uninstall Complete ===");
         }
 
+        // ------------------------------------------------------------
+        //  SERVER BINARY
+        // ------------------------------------------------------------
+
         private void StopRunningServer()
         {
             try
             {
-                var procs = Process.GetProcessesByName("ActionsServer");
-                if (procs.Length > 0)
+                var runningProcesses = Process.GetProcessesByName("ActionsServer");
+                if (runningProcesses.Length > 0)
                 {
-                    Append($"Stopping {procs.Length} running ActionsServer instance(s)...");
-                    foreach (var proc in procs)
+                    Append($"Stopping {runningProcesses.Length} running ActionsServer instance(s)...");
+                    foreach (var proc in runningProcesses)
                     {
                         try
                         {
@@ -117,6 +122,8 @@ namespace WOLe.Provisioner.Services
                             proc.Dispose();
                         }
                     }
+
+                    // Small delay to allow the OS to fully release the file handle
                     System.Threading.Thread.Sleep(500);
                 }
                 else
@@ -130,9 +137,9 @@ namespace WOLe.Provisioner.Services
             }
         }
 
-        private void EnsureServiceBinaries()
+        private void EnsureServerBinary()
         {
-            Append("Checking service binaries...");
+            Append("Checking ActionsServer.exe...");
 
             if (!File.Exists(ToolsServerExe))
             {
@@ -140,22 +147,18 @@ namespace WOLe.Provisioner.Services
                 return;
             }
 
-            if (!File.Exists(ToolsNirCmdExe))
-            {
-                Append("ERR: nircmd.exe not found in Tools folder.");
-                Append("Expected path: " + ToolsNirCmdExe);
-                return;
-            }
-
             Directory.CreateDirectory(ActionsServiceRoot);
+
+            // Stop any running instance before overwriting the binary
             StopRunningServer();
 
             File.Copy(ToolsServerExe, ServerExePath, true);
             Append($"Copied ActionsServer.exe to: {ServerExePath}");
-
-            File.Copy(ToolsNirCmdExe, NirCmdPath, true);
-            Append($"Copied nircmd.exe to: {NirCmdPath}");
         }
+
+        // ------------------------------------------------------------
+        //  LOCAL PC MATCHING
+        // ------------------------------------------------------------
 
         private string GetLocalIPAddress()
         {
@@ -191,36 +194,20 @@ namespace WOLe.Provisioner.Services
             return match;
         }
 
-        private static int ClampStep(int value)
-        {
-            // Added 20 to allowed steps
-            int[] allowed = { 2, 5, 10, 15, 20, 30, 40, 50 };
-
-            int nearest = allowed[0];
-            int bestDiff = Math.Abs(value - nearest);
-
-            for (int i = 1; i < allowed.Length; i++)
-            {
-                int diff = Math.Abs(value - allowed[i]);
-                if (diff < bestDiff)
-                {
-                    bestDiff = diff;
-                    nearest = allowed[i];
-                }
-            }
-
-            return nearest;
-        }
+        // ------------------------------------------------------------
+        //  SERVER INSTALLATION
+        // ------------------------------------------------------------
 
         private void InstallUnifiedActionServer(ProvisioningConfig cfg, WizardMode mode)
         {
             string configPath = Path.Combine(ActionsServiceRoot, "config.json");
 
             PcConfig? localPc = MatchLocalPc(cfg);
-            bool shutdownOnly = mode == WizardMode.ShutdownOnly;
 
             int port;
             string secret;
+
+            bool shutdownOnly = mode == WizardMode.ShutdownOnly;
 
             if (shutdownOnly || localPc == null)
             {
@@ -233,54 +220,49 @@ namespace WOLe.Provisioner.Services
                 secret = cfg.ShutdownSecret;
             }
 
+            // ----------------------------------------------------------------
+            //  App binding paths always come from Pcs[0] regardless of mode.
+            //  ShutdownActionMappingPage saves them into Pcs[0] and that is
+            //  the single source of truth — never blank them out.
+            // ----------------------------------------------------------------
             var pc1 = cfg.Pcs != null && cfg.Pcs.Count > 0 ? cfg.Pcs[0] : null;
 
-            string app1 = pc1?.LaunchApp1Path ?? "";
-            string app2 = pc1?.LaunchApp2Path ?? "";
-            string app3 = pc1?.LaunchApp3Path ?? "";
-            string app4 = pc1?.LaunchApp4Path ?? "";
-            string app5 = pc1?.LaunchApp5Path ?? "";
-            string app6 = pc1?.LaunchApp6Path ?? "";
-            string app7 = pc1?.LaunchApp7Path ?? "";
-            string app8 = pc1?.LaunchApp8Path ?? "";
+            string launchApp1Path = pc1?.LaunchApp1Path ?? "";
+            string launchApp2Path = pc1?.LaunchApp2Path ?? "";
+            string launchApp3Path = pc1?.LaunchApp3Path ?? "";
+            string launchApp4Path = pc1?.LaunchApp4Path ?? "";
 
-            int upStep = ClampStep(cfg.VolumeUpStepPercent);
-            int downStep = ClampStep(cfg.VolumeDownStepPercent);
+            string escapeJson(string s) => (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
 
-            string esc(string s) => (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
-
-            File.WriteAllText(configPath,
-$@"{{
+            File.WriteAllText(configPath, $@"{{
   ""port"": {port},
-  ""secret"": ""{esc(secret)}"",
-  ""volumeUpStep"": {upStep},
-  ""volumeDownStep"": {downStep},
-  ""volumeStep"": {upStep},
-  ""launchApp1"": ""{esc(app1)}"",
-  ""launchApp2"": ""{esc(app2)}"",
-  ""launchApp3"": ""{esc(app3)}"",
-  ""launchApp4"": ""{esc(app4)}"",
-  ""launchApp5"": ""{esc(app5)}"",
-  ""launchApp6"": ""{esc(app6)}"",
-  ""launchApp7"": ""{esc(app7)}"",
-  ""launchApp8"": ""{esc(app8)}""
+  ""secret"": ""{escapeJson(secret)}"",
+  ""launchApp1"": ""{escapeJson(launchApp1Path)}"",
+  ""launchApp2"": ""{escapeJson(launchApp2Path)}"",
+  ""launchApp3"": ""{escapeJson(launchApp3Path)}"",
+  ""launchApp4"": ""{escapeJson(launchApp4Path)}""
 }}");
 
             Append($"Generated config.json: {configPath}");
-            Append($"Configured volumeUpStep: {upStep}%");
-            Append($"Configured volumeDownStep: {downStep}%");
+
+            if (!string.IsNullOrWhiteSpace(launchApp1Path)) Append("App 1 binding: configured");
+            if (!string.IsNullOrWhiteSpace(launchApp2Path)) Append("App 2 binding: configured");
+            if (!string.IsNullOrWhiteSpace(launchApp3Path)) Append("App 3 binding: configured");
+            if (!string.IsNullOrWhiteSpace(launchApp4Path)) Append("App 4 binding: configured");
 
             InstallScheduledTask();
 
+            // Start the server immediately so the user does not need to log out
             try
             {
                 Append("Starting ActionsServer...");
-                Process.Start(new ProcessStartInfo
+                var psi = new ProcessStartInfo
                 {
                     FileName = ServerExePath,
                     UseShellExecute = false,
                     CreateNoWindow = true
-                });
+                };
+                Process.Start(psi);
                 Append("ActionsServer started.");
             }
             catch (Exception ex)
@@ -288,6 +270,10 @@ $@"{{
                 Append("WARN: Could not auto-start ActionsServer after install: " + ex.Message);
             }
         }
+
+        // ------------------------------------------------------------
+        //  SCHEDULED TASK (per-user, hidden)
+        // ------------------------------------------------------------
 
         private void InstallScheduledTask()
         {
@@ -348,7 +334,9 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 
             string tmpXml = Path.Combine(Path.GetTempPath(), "WOL-e_Actions_Task.xml");
             File.WriteAllText(tmpXml, taskXml, Encoding.Unicode);
+
             RunCommand("schtasks", $"/Create /TN \"{newTask}\" /XML \"{tmpXml}\" /F");
+
             try { File.Delete(tmpXml); } catch { }
 
             Append("Per-user hidden scheduled task installed.");
@@ -356,23 +344,37 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 
         private void RemoveAllLegacyTasks()
         {
-            foreach (var name in new[] { "WOL-e_Shutdown", "WOL-e_Actions" })
+            string[] legacyNames =
+            {
+                "WOL-e_Shutdown",
+                "WOL-e_Actions"
+            };
+
+            foreach (var name in legacyNames)
             {
                 Append($"Removing task: {name}");
                 RunCommand("schtasks", $"/Delete /TN \"{name}\" /F");
             }
         }
 
+        // ------------------------------------------------------------
+        //  FIREWALL (config.json-based port cleanup, URL ACL handling)
+        // ------------------------------------------------------------
+
         private void InstallFirewallRule(ProvisioningConfig cfg, WizardMode mode)
         {
             Append("Configuring Windows Firewall...");
+
             RemoveFirewallRule();
 
+            // Program-based fallback rule
             RunCommand("netsh",
-                $"advfirewall firewall add rule name=\"WOL-e Actions Server\" dir=in action=allow program=\"{ServerExePath}\" enable=yes");
+                $"advfirewall firewall add rule name=\"WOL-e Actions Server\" " +
+                $"dir=in action=allow program=\"{ServerExePath}\" enable=yes");
 
             Append("Program-based firewall rule added.");
 
+            // Multi-PC port rules
             if (cfg.Pcs != null)
             {
                 foreach (var pc in cfg.Pcs)
@@ -380,7 +382,9 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
                     if (!string.IsNullOrWhiteSpace(pc.IpAddress) && pc.Port > 0)
                     {
                         RunCommand("netsh",
-                            $"advfirewall firewall add rule name=\"WOL-e Actions Server Port {pc.Port}\" dir=in action=allow protocol=TCP localport={pc.Port} profile=private enable=yes");
+                            $"advfirewall firewall add rule name=\"WOL-e Actions Server Port {pc.Port}\" " +
+                            $"dir=in action=allow protocol=TCP localport={pc.Port} profile=any enable=yes");
+
                         Append($"Firewall port rule added for PC port {pc.Port}");
 
                         try
@@ -396,12 +400,14 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
                 }
             }
 
+            // Shutdown-only mode port rule
             if (mode == WizardMode.ShutdownOnly && cfg.ShutdownPcPort != null)
             {
                 int shutdownPort = cfg.ShutdownPcPort.Value;
 
                 RunCommand("netsh",
-                    $"advfirewall firewall add rule name=\"WOL-e Shutdown Server Port {shutdownPort}\" dir=in action=allow protocol=TCP localport={shutdownPort} profile=private enable=yes");
+                    $"advfirewall firewall add rule name=\"WOL-e Shutdown Server Port {shutdownPort}\" " +
+                    $"dir=in action=allow protocol=TCP localport={shutdownPort} profile=any enable=yes");
 
                 Append($"Firewall port rule added for shutdown-only port {shutdownPort}");
 
@@ -423,9 +429,11 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
         {
             Append("Removing firewall rules (if exist)...");
 
+            // Remove program-based rules (by program path)
             RunCommand("netsh", $"advfirewall firewall delete rule name=\"WOL-e Actions Server\" program=\"{ServerExePath}\"");
             RunCommand("netsh", $"advfirewall firewall delete rule name=\"WOL-e Shutdown Server\" program=\"{ServerExePath}\"");
 
+            // Read config.json to find the port and remove its rules and URL ACL
             try
             {
                 string configPath = Path.Combine(ActionsServiceRoot, "config.json");
@@ -440,6 +448,7 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
                         portProp.ValueKind == JsonValueKind.Number)
                     {
                         int port = portProp.GetInt32();
+
                         RunCommand("netsh", $"advfirewall firewall delete rule name=\"WOL-e Actions Server Port {port}\"");
                         RunCommand("netsh", $"advfirewall firewall delete rule name=\"WOL-e Shutdown Server Port {port}\"");
                         RunCommand("netsh", $"advfirewall firewall delete rule protocol=TCP localport={port}");
@@ -458,6 +467,7 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
                 }
                 else
                 {
+                    // config.json not found — best-effort fallback on default port
                     Append("config.json not found — attempting fallback removal on port 5050.");
                     RunCommand("netsh", "advfirewall firewall delete rule name=\"WOL-e Actions Server Port 5050\"");
                     RunCommand("netsh", "advfirewall firewall delete rule name=\"WOL-e Shutdown Server Port 5050\"");
@@ -469,6 +479,10 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
             }
         }
 
+        // ------------------------------------------------------------
+        //  URL ACL helpers (require admin elevation to succeed)
+        // ------------------------------------------------------------
+
         private void AddUrlAcl(int port)
         {
             string user = $"{Environment.UserDomainName}\\{Environment.UserName}";
@@ -479,6 +493,10 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
         {
             RunCommand("netsh", $"http delete urlacl url=http://+:{port}/");
         }
+
+        // ------------------------------------------------------------
+        //  UTILITIES
+        // ------------------------------------------------------------
 
         private void RunCommand(string fileName, string arguments)
         {
@@ -503,10 +521,14 @@ $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 
             string output = p.StandardOutput.ReadToEnd();
             string error = p.StandardError.ReadToEnd();
+
             p.WaitForExit();
 
-            if (!string.IsNullOrWhiteSpace(output)) Append(output.Trim());
-            if (!string.IsNullOrWhiteSpace(error)) Append("ERR: " + error.Trim());
+            if (!string.IsNullOrWhiteSpace(output))
+                Append(output.Trim());
+
+            if (!string.IsNullOrWhiteSpace(error))
+                Append("ERR: " + error.Trim());
 
             Append($"Exit code: {p.ExitCode}");
         }
