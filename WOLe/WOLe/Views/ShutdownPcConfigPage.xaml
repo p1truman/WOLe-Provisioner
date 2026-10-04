@@ -20,7 +20,7 @@
 
                 <TextBox x:Name="IpBox"
                          Header="PC IP Address"
-                         PlaceholderText=""
+                         PlaceholderText="192.168.1.100"
                          Margin="0,8,0,0" />
 
                 <TextBox x:Name="PortBox"

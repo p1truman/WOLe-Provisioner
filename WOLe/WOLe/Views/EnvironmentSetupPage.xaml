@@ -39,22 +39,12 @@
                              Visibility="Collapsed"
                              Foreground="{ThemeResource ConfigAccentBrush}" />
 
-                <!-- Button row -->
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Center"
-                            Spacing="12">
-                    <Button x:Name="SetupButton"
-                            Content="Run Environment Setup"
-                            Width="260"
-                            Height="44"
-                            Click="SetupButton_Click" />
-
-                    <Button x:Name="SkipButton"
-                            Content="Skip"
-                            Width="120"
-                            Height="44"
-                            Click="SkipButton_Click" />
-                </StackPanel>
+                <Button x:Name="SetupButton"
+                        Content="Run Environment Setup"
+                        HorizontalAlignment="Center"
+                        Width="260"
+                        Height="44"
+                        Click="SetupButton_Click" />
 
                 <TextBlock x:Name="ErrorText"
                            Style="{StaticResource ConfigBodyTextStyle}"
