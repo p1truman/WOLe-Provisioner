@@ -11,10 +11,19 @@ namespace WOLe.ActionsServer
     {
         public int Port { get; set; }
         public string Secret { get; set; } = "";
+
+        public int VolumeUpStep { get; set; } = 6;
+        public int VolumeDownStep { get; set; } = 6;
+        public int VolumeStep { get; set; } = 6;
+
         public string LaunchApp1 { get; set; } = "";
         public string LaunchApp2 { get; set; } = "";
         public string LaunchApp3 { get; set; } = "";
         public string LaunchApp4 { get; set; } = "";
+        public string LaunchApp5 { get; set; } = "";
+        public string LaunchApp6 { get; set; } = "";
+        public string LaunchApp7 { get; set; } = "";
+        public string LaunchApp8 { get; set; } = "";
     }
 
     public static class Program
@@ -22,6 +31,8 @@ namespace WOLe.ActionsServer
         private static ServerConfig _config = new();
         private static string _configPath = "";
         private static string _logPath = "";
+        private static string _basePath = "";
+        private static string _nircmdPath = "";
 
         public static int Main(string[] args)
         {
@@ -29,7 +40,12 @@ namespace WOLe.ActionsServer
             {
                 InitializePaths();
                 LoadConfig();
-                Log($"WOL-e Actions Server starting on port {_config.Port}.");
+
+                Log($"WOL-e Actions Server starting on port {_config.Port}. VolumeUp: {_config.VolumeUpStep}%, VolumeDown: {_config.VolumeDownStep}%");
+                Log("Audio mode: NirCmd");
+                Log(File.Exists(_nircmdPath)
+                    ? $"nircmd found: {_nircmdPath}"
+                    : $"WARN: nircmd missing: {_nircmdPath}");
 
                 using var listener = new HttpListener();
                 listener.Prefixes.Add($"http://+:{_config.Port}/");
@@ -55,11 +71,12 @@ namespace WOLe.ActionsServer
             var appData = Environment.GetEnvironmentVariable("APPDATA")
                 ?? throw new InvalidOperationException("APPDATA environment variable is not set.");
 
-            var basePath = Path.Combine(appData, "WOL-e", "actions-service");
-            Directory.CreateDirectory(basePath);
+            _basePath = Path.Combine(appData, "WOL-e", "actions-service");
+            Directory.CreateDirectory(_basePath);
 
-            _configPath = Path.Combine(basePath, "config.json");
-            _logPath = Path.Combine(basePath, "actions_log.txt");
+            _configPath = Path.Combine(_basePath, "config.json");
+            _logPath = Path.Combine(_basePath, "actions_log.txt");
+            _nircmdPath = Path.Combine(_basePath, "nircmd.exe");
         }
 
         private static void LoadConfig()
@@ -68,7 +85,6 @@ namespace WOLe.ActionsServer
                 throw new FileNotFoundException("config.json not found", _configPath);
 
             var json = File.ReadAllText(_configPath, Encoding.UTF8);
-
             var cfg = new ServerConfig();
 
             using (var doc = JsonDocument.Parse(json))
@@ -77,16 +93,35 @@ namespace WOLe.ActionsServer
 
                 cfg.Port = GetInt(root, "Port", "port", 5050);
                 cfg.Secret = GetString(root, "Secret", "secret");
+
+                cfg.VolumeStep = GetInt(root, "VolumeStep", "volumeStep", 6);
+                cfg.VolumeUpStep = GetInt(root, "VolumeUpStep", "volumeUpStep", cfg.VolumeStep);
+                cfg.VolumeDownStep = GetInt(root, "VolumeDownStep", "volumeDownStep", cfg.VolumeStep);
+
                 cfg.LaunchApp1 = GetString(root, "LaunchApp1", "launchApp1");
                 cfg.LaunchApp2 = GetString(root, "LaunchApp2", "launchApp2");
                 cfg.LaunchApp3 = GetString(root, "LaunchApp3", "launchApp3");
                 cfg.LaunchApp4 = GetString(root, "LaunchApp4", "launchApp4");
+                cfg.LaunchApp5 = GetString(root, "LaunchApp5", "launchApp5");
+                cfg.LaunchApp6 = GetString(root, "LaunchApp6", "launchApp6");
+                cfg.LaunchApp7 = GetString(root, "LaunchApp7", "launchApp7");
+                cfg.LaunchApp8 = GetString(root, "LaunchApp8", "launchApp8");
             }
 
             if (string.IsNullOrWhiteSpace(cfg.Secret))
                 throw new InvalidOperationException("Secret is missing in config.json.");
 
+            cfg.VolumeUpStep = ClampStep(cfg.VolumeUpStep);
+            cfg.VolumeDownStep = ClampStep(cfg.VolumeDownStep);
+
             _config = cfg;
+        }
+
+        private static int ClampStep(int value)
+        {
+            if (value < 1) return 1;
+            if (value > 50) return 50;
+            return value;
         }
 
         private static string GetString(JsonElement root, params string[] keys)
@@ -104,12 +139,8 @@ namespace WOLe.ActionsServer
 
         private static int GetInt(JsonElement root, string key1, string key2, int defaultValue)
         {
-            if (root.TryGetProperty(key1, out var p1) && p1.TryGetInt32(out var v1))
-                return v1;
-
-            if (root.TryGetProperty(key2, out var p2) && p2.TryGetInt32(out var v2))
-                return v2;
-
+            if (root.TryGetProperty(key1, out var p1) && p1.TryGetInt32(out var v1)) return v1;
+            if (root.TryGetProperty(key2, out var p2) && p2.TryGetInt32(out var v2)) return v2;
             return defaultValue;
         }
 
@@ -122,12 +153,7 @@ namespace WOLe.ActionsServer
 
                 var path = request.Url?.AbsolutePath ?? "/";
                 var query = request.Url?.Query ?? "";
-
                 var key = GetQueryParam(query, "key");
-
-                // ------------------------------------------------------------
-                //  LEGACY ESP32 / PYTHON SERVER COMPATIBILITY LAYER
-                // ------------------------------------------------------------
 
                 var action = GetQueryParam(query, "action");
                 if (!string.IsNullOrEmpty(action))
@@ -136,23 +162,29 @@ namespace WOLe.ActionsServer
 
                     switch (action.ToLowerInvariant())
                     {
-                        case "shutdown":  path = "/shutdown";  break;
-                        case "restart":   path = "/restart";   break;
-                        case "sleep":     path = "/sleep";     break;
+                        case "shutdown": path = "/shutdown"; break;
+                        case "restart": path = "/restart"; break;
+                        case "sleep": path = "/sleep"; break;
                         case "hibernate": path = "/hibernate"; break;
-                        case "lock":      path = "/lock";      break;
+                        case "lock": path = "/lock"; break;
                         case "screenoff": path = "/screenoff"; break;
+                        case "mute": path = "/mute"; break;
+                        case "unmute": path = "/unmute"; break;
+                        case "volumeup": path = "/volumeup"; break;
+                        case "volumedown": path = "/volumedown"; break;
                         case "launchapp1": path = "/launchapp1"; break;
                         case "launchapp2": path = "/launchapp2"; break;
                         case "launchapp3": path = "/launchapp3"; break;
                         case "launchapp4": path = "/launchapp4"; break;
+                        case "launchapp5": path = "/launchapp5"; break;
+                        case "launchapp6": path = "/launchapp6"; break;
+                        case "launchapp7": path = "/launchapp7"; break;
+                        case "launchapp8": path = "/launchapp8"; break;
                     }
 
-                    // Old ESP32 never sent the key → inject it
                     key = _config.Secret;
                 }
 
-                // Legacy bare paths (no key)
                 if (string.IsNullOrEmpty(key))
                 {
                     switch (path.ToLowerInvariant())
@@ -163,19 +195,24 @@ namespace WOLe.ActionsServer
                         case "/hibernate":
                         case "/lock":
                         case "/screenoff":
+                        case "/mute":
+                        case "/unmute":
+                        case "/volumeup":
+                        case "/volumedown":
                         case "/launchapp1":
                         case "/launchapp2":
                         case "/launchapp3":
                         case "/launchapp4":
+                        case "/launchapp5":
+                        case "/launchapp6":
+                        case "/launchapp7":
+                        case "/launchapp8":
                             Log("Legacy path detected without key — injecting secret.");
                             key = _config.Secret;
                             break;
                     }
                 }
 
-                // ------------------------------------------------------------
-                //  SECRET VALIDATION (after legacy injection)
-                // ------------------------------------------------------------
                 if (!string.Equals(key, _config.Secret, StringComparison.Ordinal))
                 {
                     WriteResponse(response, 403, "FORBIDDEN");
@@ -187,14 +224,11 @@ namespace WOLe.ActionsServer
                 switch (path.ToLowerInvariant())
                 {
                     case "/shutdown":
-                        // /f forces apps to close without waiting for user confirmation —
-                        // required when the session is locked and no interactive user can respond.
                         RunCommand("shutdown", "/s /t 0 /f");
                         WriteResponse(response, 200, "SHUTDOWN");
                         return;
 
                     case "/restart":
-                        // /f same reason as shutdown above.
                         RunCommand("shutdown", "/r /t 0 /f");
                         WriteResponse(response, 200, "RESTART");
                         return;
@@ -220,21 +254,46 @@ namespace WOLe.ActionsServer
                         WriteResponse(response, 200, "SCREENOFF");
                         return;
 
+                    case "/mute":
+                        EnsureNirCmd();
+                        RunCommand(_nircmdPath, "mutesysvolume 1");
+                        WriteResponse(response, 200, "MUTE");
+                        return;
+
+                    case "/unmute":
+                        EnsureNirCmd();
+                        RunCommand(_nircmdPath, "mutesysvolume 0");
+                        WriteResponse(response, 200, "UNMUTE");
+                        return;
+
+                    case "/volumeup":
+                        EnsureNirCmd();
+                        RunCommand(_nircmdPath, $"changesysvolume {PercentToNirCmdDelta(_config.VolumeUpStep)}");
+                        WriteResponse(response, 200, "VOLUME_UP");
+                        return;
+
+                    case "/volumedown":
+                        EnsureNirCmd();
+                        RunCommand(_nircmdPath, $"changesysvolume -{PercentToNirCmdDelta(_config.VolumeDownStep)}");
+                        WriteResponse(response, 200, "VOLUME_DOWN");
+                        return;
+
                     case "/launchapp1":
-                        HandleLaunchApp(response, _config.LaunchApp1, "LAUNCH_APP_1");
-                        return;
-
+                        HandleLaunchApp(response, _config.LaunchApp1, "LAUNCH_APP_1"); return;
                     case "/launchapp2":
-                        HandleLaunchApp(response, _config.LaunchApp2, "LAUNCH_APP_2");
-                        return;
-
+                        HandleLaunchApp(response, _config.LaunchApp2, "LAUNCH_APP_2"); return;
                     case "/launchapp3":
-                        HandleLaunchApp(response, _config.LaunchApp3, "LAUNCH_APP_3");
-                        return;
-
+                        HandleLaunchApp(response, _config.LaunchApp3, "LAUNCH_APP_3"); return;
                     case "/launchapp4":
-                        HandleLaunchApp(response, _config.LaunchApp4, "LAUNCH_APP_4");
-                        return;
+                        HandleLaunchApp(response, _config.LaunchApp4, "LAUNCH_APP_4"); return;
+                    case "/launchapp5":
+                        HandleLaunchApp(response, _config.LaunchApp5, "LAUNCH_APP_5"); return;
+                    case "/launchapp6":
+                        HandleLaunchApp(response, _config.LaunchApp6, "LAUNCH_APP_6"); return;
+                    case "/launchapp7":
+                        HandleLaunchApp(response, _config.LaunchApp7, "LAUNCH_APP_7"); return;
+                    case "/launchapp8":
+                        HandleLaunchApp(response, _config.LaunchApp8, "LAUNCH_APP_8"); return;
 
                     case "/ping":
                         WriteResponse(response, 200, "PONG");
@@ -245,7 +304,7 @@ namespace WOLe.ActionsServer
                         return;
 
                     case "/version":
-                        WriteResponse(response, 200, "WOL-e Actions Server 1.0");
+                        WriteResponse(response, 200, "WOL-e Actions Server 2.1-nircmd");
                         return;
 
                     default:
@@ -260,6 +319,20 @@ namespace WOLe.ActionsServer
             }
         }
 
+        private static int PercentToNirCmdDelta(int percent)
+        {
+            var delta = (int)Math.Round((percent / 100.0) * 65535.0);
+            if (delta < 1) delta = 1;
+            if (delta > 65535) delta = 65535;
+            return delta;
+        }
+
+        private static void EnsureNirCmd()
+        {
+            if (!File.Exists(_nircmdPath))
+                throw new FileNotFoundException("nircmd.exe not found beside ActionsServer.exe", _nircmdPath);
+        }
+
         private static void HandleLaunchApp(HttpListenerResponse response, string path, string label)
         {
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -270,12 +343,12 @@ namespace WOLe.ActionsServer
 
             try
             {
-                var psi = new ProcessStartInfo
+                Process.Start(new ProcessStartInfo
                 {
                     FileName = path,
-                    UseShellExecute = true
-                };
-                Process.Start(psi);
+                    UseShellExecute = true,
+                    WindowStyle = ProcessWindowStyle.Normal
+                });
                 WriteResponse(response, 200, label);
             }
             catch (Exception ex)
@@ -287,11 +360,8 @@ namespace WOLe.ActionsServer
 
         private static string GetQueryParam(string query, string name)
         {
-            if (string.IsNullOrEmpty(query))
-                return "";
-
-            if (query.StartsWith("?"))
-                query = query.Substring(1);
+            if (string.IsNullOrEmpty(query)) return "";
+            if (query.StartsWith("?")) query = query.Substring(1);
 
             var parts = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
             foreach (var part in parts)
@@ -300,7 +370,6 @@ namespace WOLe.ActionsServer
                 if (kv.Length == 2 && string.Equals(kv[0], name, StringComparison.OrdinalIgnoreCase))
                     return Uri.UnescapeDataString(kv[1]);
             }
-
             return "";
         }
 
@@ -325,7 +394,9 @@ namespace WOLe.ActionsServer
                     FileName = fileName,
                     Arguments = arguments,
                     UseShellExecute = false,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
                 };
 
                 using var p = Process.Start(psi);
@@ -335,7 +406,13 @@ namespace WOLe.ActionsServer
                     return;
                 }
 
+                string output = p.StandardOutput.ReadToEnd();
+                string error = p.StandardError.ReadToEnd();
                 p.WaitForExit();
+
+                if (!string.IsNullOrWhiteSpace(output)) Log("OUT: " + output.Trim());
+                if (!string.IsNullOrWhiteSpace(error)) Log("ERR: " + error.Trim());
+
                 Log($"Exit code: {p.ExitCode}");
             }
             catch (Exception ex)
@@ -350,7 +427,6 @@ namespace WOLe.ActionsServer
             {
                 var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
                 Console.WriteLine(line);
-
                 if (!string.IsNullOrEmpty(_logPath))
                     File.AppendAllText(_logPath, line + Environment.NewLine, Encoding.UTF8);
             }

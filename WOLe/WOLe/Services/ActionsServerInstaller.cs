@@ -38,11 +38,17 @@ namespace WOLe.Provisioner.Services
         private string ServerExePath =>
             Path.Combine(ActionsServiceRoot, "ActionsServer.exe");
 
+        private string NirCmdPath =>
+            Path.Combine(ActionsServiceRoot, "nircmd.exe");
+
         private string ToolsRoot =>
             Path.Combine(AppContext.BaseDirectory, "Tools");
 
         private string ToolsServerExe =>
             Path.Combine(ToolsRoot, "ActionsServer.exe");
+
+        private string ToolsNirCmdExe =>
+            Path.Combine(ToolsRoot, "nircmd.exe");
 
         // ------------------------------------------------------------
         //  INSTALL / UNINSTALL
@@ -149,11 +155,21 @@ namespace WOLe.Provisioner.Services
 
             Directory.CreateDirectory(ActionsServiceRoot);
 
-            // Stop any running instance before overwriting the binary
+            // Stop any running instance before overwriting binaries
             StopRunningServer();
 
             File.Copy(ToolsServerExe, ServerExePath, true);
             Append($"Copied ActionsServer.exe to: {ServerExePath}");
+
+            if (File.Exists(ToolsNirCmdExe))
+            {
+                File.Copy(ToolsNirCmdExe, NirCmdPath, true);
+                Append($"Copied nircmd.exe to: {NirCmdPath}");
+            }
+            else
+            {
+                Append("WARN: nircmd.exe not found in Tools folder — volume/mute will not work.");
+            }
         }
 
         // ------------------------------------------------------------
@@ -220,11 +236,7 @@ namespace WOLe.Provisioner.Services
                 secret = cfg.ShutdownSecret;
             }
 
-            // ----------------------------------------------------------------
-            //  App binding paths always come from Pcs[0] regardless of mode.
-            //  ShutdownActionMappingPage saves them into Pcs[0] and that is
-            //  the single source of truth — never blank them out.
-            // ----------------------------------------------------------------
+            // App binding paths always come from Pcs[0] regardless of mode.
             var pc1 = cfg.Pcs != null && cfg.Pcs.Count > 0 ? cfg.Pcs[0] : null;
 
             string launchApp1Path = pc1?.LaunchApp1Path ?? "";
@@ -232,11 +244,17 @@ namespace WOLe.Provisioner.Services
             string launchApp3Path = pc1?.LaunchApp3Path ?? "";
             string launchApp4Path = pc1?.LaunchApp4Path ?? "";
 
+            // Problem #1 fix: write keys Program.cs actually reads
+            int volumeUpStep = ClampStep(cfg.VolumeUpStepPercent);
+            int volumeDownStep = ClampStep(cfg.VolumeDownStepPercent);
+
             string escapeJson(string s) => (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"");
 
             File.WriteAllText(configPath, $@"{{
   ""port"": {port},
   ""secret"": ""{escapeJson(secret)}"",
+  ""VolumeUpStep"": {volumeUpStep},
+  ""VolumeDownStep"": {volumeDownStep},
   ""launchApp1"": ""{escapeJson(launchApp1Path)}"",
   ""launchApp2"": ""{escapeJson(launchApp2Path)}"",
   ""launchApp3"": ""{escapeJson(launchApp3Path)}"",
@@ -244,6 +262,7 @@ namespace WOLe.Provisioner.Services
 }}");
 
             Append($"Generated config.json: {configPath}");
+            Append($"Volume steps configured: up {volumeUpStep}%, down {volumeDownStep}%");
 
             if (!string.IsNullOrWhiteSpace(launchApp1Path)) Append("App 1 binding: configured");
             if (!string.IsNullOrWhiteSpace(launchApp2Path)) Append("App 2 binding: configured");
@@ -269,6 +288,13 @@ namespace WOLe.Provisioner.Services
             {
                 Append("WARN: Could not auto-start ActionsServer after install: " + ex.Message);
             }
+        }
+
+        private int ClampStep(int value)
+        {
+            if (value < 1) return 1;
+            if (value > 50) return 50;
+            return value;
         }
 
         // ------------------------------------------------------------

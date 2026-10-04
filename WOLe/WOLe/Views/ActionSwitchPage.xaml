@@ -6,7 +6,7 @@
     <Grid Padding="32">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="24"
-                        MaxWidth="660"
+                        MaxWidth="700"
                         HorizontalAlignment="Center">
 
                 <TextBlock Text="WOL-e Enhanced Functionality"
@@ -24,11 +24,13 @@
                            Margin="0,4,0,0"
                            Foreground="{ThemeResource ConfigHeaderBrush}" />
 
-                <Grid Margin="0,8,0,0">
+                <!-- Fixed-width action row -->
+                <Grid Margin="0,8,0,0"
+                      HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="60" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="290" />
+                        <ColumnDefinition Width="290" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" />
                     <TextBlock Grid.Column="1" HorizontalAlignment="Center" Style="{StaticResource ConfigSectionHeaderStyle}">
@@ -41,11 +43,13 @@
                     </TextBlock>
                 </Grid>
 
-                <Grid Margin="0,4,0,0" ColumnSpacing="16">
+                <Grid Margin="0,4,0,0"
+                      ColumnSpacing="16"
+                      HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="60" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="290" />
+                        <ColumnDefinition Width="290" />
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="DeviceLabelText"
                                Grid.Column="0"
@@ -55,14 +59,45 @@
                                Foreground="{ThemeResource ConfigAccentBrush}" />
                     <ComboBox x:Name="OnActionComboBox"
                               Grid.Column="1"
-                              HorizontalAlignment="Stretch"
+                              Width="290"
+                              HorizontalAlignment="Left"
                               PlaceholderText="Select ON action..." />
                     <ComboBox x:Name="OffActionComboBox"
                               Grid.Column="2"
-                              HorizontalAlignment="Stretch"
+                              Width="290"
+                              HorizontalAlignment="Left"
                               PlaceholderText="Select OFF action..." />
                 </Grid>
 
+                <!-- Volume step panel -->
+                <StackPanel x:Name="VolumeStepPanel"
+                            Visibility="Collapsed"
+                            Spacing="12"
+                            Margin="0,8,0,0">
+                    <TextBlock Text="Volume Step Settings"
+                               Style="{StaticResource ConfigSectionHeaderStyle}" />
+                    <TextBlock Text="Set independent step sizes used by Volume Up and Volume Down actions."
+                               Style="{StaticResource ConfigBodyTextStyle}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel x:Name="VolumeUpStepContainer" Grid.Column="0" Visibility="Collapsed" Spacing="6">
+                            <TextBlock Text="Volume Up Step (%)" Style="{StaticResource ConfigSectionHeaderStyle}" />
+                            <ComboBox x:Name="VolumeUpStepComboBox" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="VolumeDownStepContainer" Grid.Column="1" Visibility="Collapsed" Spacing="6">
+                            <TextBlock Text="Volume Down Step (%)" Style="{StaticResource ConfigSectionHeaderStyle}" />
+                            <ComboBox x:Name="VolumeDownStepComboBox" HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                <!-- APP BINDINGS PANEL -->
                 <StackPanel x:Name="Pc1AppBindingsPanel"
                             Visibility="Collapsed"
                             Spacing="16"
@@ -124,6 +159,58 @@
                             <Button x:Name="BrowseLaunchApp4Button" Content="Browse..." Grid.Column="1" Height="32" Click="BrowseLaunchApp4_Click" />
                         </Grid>
                         <TextBlock x:Name="LaunchApp4PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
+                    </StackPanel>
+
+                    <StackPanel x:Name="LaunchApp5Panel" Visibility="Collapsed" Spacing="6">
+                        <TextBlock Text="Launch App 5" Style="{StaticResource ConfigSectionHeaderStyle}" />
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="LaunchApp5ComboBox" HorizontalAlignment="Stretch" Grid.Column="0" SelectionChanged="LaunchApp5ComboBox_SelectionChanged" />
+                            <Button x:Name="BrowseLaunchApp5Button" Content="Browse..." Grid.Column="1" Height="32" Click="BrowseLaunchApp5_Click" />
+                        </Grid>
+                        <TextBlock x:Name="LaunchApp5PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
+                    </StackPanel>
+
+                    <StackPanel x:Name="LaunchApp6Panel" Visibility="Collapsed" Spacing="6">
+                        <TextBlock Text="Launch App 6" Style="{StaticResource ConfigSectionHeaderStyle}" />
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="LaunchApp6ComboBox" HorizontalAlignment="Stretch" Grid.Column="0" SelectionChanged="LaunchApp6ComboBox_SelectionChanged" />
+                            <Button x:Name="BrowseLaunchApp6Button" Content="Browse..." Grid.Column="1" Height="32" Click="BrowseLaunchApp6_Click" />
+                        </Grid>
+                        <TextBlock x:Name="LaunchApp6PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
+                    </StackPanel>
+
+                    <StackPanel x:Name="LaunchApp7Panel" Visibility="Collapsed" Spacing="6">
+                        <TextBlock Text="Launch App 7" Style="{StaticResource ConfigSectionHeaderStyle}" />
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="LaunchApp7ComboBox" HorizontalAlignment="Stretch" Grid.Column="0" SelectionChanged="LaunchApp7ComboBox_SelectionChanged" />
+                            <Button x:Name="BrowseLaunchApp7Button" Content="Browse..." Grid.Column="1" Height="32" Click="BrowseLaunchApp7_Click" />
+                        </Grid>
+                        <TextBlock x:Name="LaunchApp7PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
+                    </StackPanel>
+
+                    <StackPanel x:Name="LaunchApp8Panel" Visibility="Collapsed" Spacing="6">
+                        <TextBlock Text="Launch App 8" Style="{StaticResource ConfigSectionHeaderStyle}" />
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="LaunchApp8ComboBox" HorizontalAlignment="Stretch" Grid.Column="0" SelectionChanged="LaunchApp8ComboBox_SelectionChanged" />
+                            <Button x:Name="BrowseLaunchApp8Button" Content="Browse..." Grid.Column="1" Height="32" Click="BrowseLaunchApp8_Click" />
+                        </Grid>
+                        <TextBlock x:Name="LaunchApp8PathText" Style="{StaticResource ConfigBodyTextStyle}" FontSize="11" Opacity="0.7" Visibility="Collapsed" />
                     </StackPanel>
 
                 </StackPanel>
